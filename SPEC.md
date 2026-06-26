@@ -1,6 +1,6 @@
 # 週間時段 To Do List — 產品規格書（SPEC）
 
-> 版本：v0.9（已確認）  
+> 版本：v0.10（已確認）  
 > 建立日期：2026-06-26  
 > 部署目標：單一 `index.html` → **GitHub Pages**  
 > 資料後端：**新建 Supabase 專案**（無登入、自動同步）
@@ -46,7 +46,7 @@
 | 前端 | 單一 `index.html`（HTML + CSS + Vanilla JS） |
 | 資料庫 | Supabase（PostgreSQL） |
 | SDK | CDN：`@supabase/supabase-js@2`（含備援 CDN） |
-| 同步 | 開頁 `select` 全量載入；變更即時／防抖 `upsert` |
+| 同步 | 開頁 `select` 全量載入；變更依情境即時／防抖 `insert`、`update`、`delete` |
 | 字體 | `Microsoft JhengHei`、`Noto Sans TC` |
 | 部署 | GitHub Pages |
 
@@ -140,7 +140,7 @@
 
 | 觸發 | 行為 |
 |------|------|
-| 點擊空格（無事項區域） | 該格底部出現輸入框並自動 `focus` |
+| 點擊格子背景（含空格或有事項格的空白處） | 該格最上方出現輸入框並自動 `focus` |
 | 預填 | 日期 = 該欄日期；時段 = 該列時間 |
 | Enter | 新增事項並自動存檔 |
 | Esc | 取消輸入、收起輸入框 |
@@ -181,9 +181,9 @@
 | 編輯文字（inline） | **防抖 800ms** 停止輸入後 | `update` |
 | 顏色標籤變更 | 立即 | `update` |
 | 清除當日／複製 | 操作完成後 | `delete` / 批次 `insert` |
-| 設定變更 | 按儲存後 | `upsert` app_settings |
-| 常用項目變更 | 新增／刪除後立即 | `upsert` app_settings.common_items |
-| 文字大小變更 | 按儲存後 | `upsert` app_settings.font_size |
+| 設定變更 | 按儲存後 | `update` app_settings `id=1` |
+| 常用項目變更 | 新增／刪除後立即 | `update` app_settings.common_items `id=1` |
+| 文字大小變更 | 按儲存後 | `update` app_settings.font_size `id=1` |
 
 **備援機制**：若 800ms 防抖期間持續輸入，最遲每 **5 秒**強制將未同步的 dirty 狀態寫入一次。
 
@@ -237,10 +237,10 @@
 - 設定面板預設隱藏，需點「設定」才展開。
 - 設定面板提供「常用設定」，可新增／刪除常用項目。
 - 常用項目儲存在 `app_settings.common_items`，型別為 `jsonb` 陣列。
-- 每格待辦功能列預設隱藏；點擊該格 cell 或格內任一待辦項目後，於表格格子的最上層浮動顯示「常用」「新增」「刪除」「已完成」，不佔用格內排版高度。
+- 每格待辦功能列預設隱藏；點擊格內任一待辦項目後，於表格格子的最上層浮動顯示「常用」「新增」「刪除」「已完成」，不佔用格內排版高度。
 - 「常用」以下拉式選單呈現，選取後會把待辦文字改為該常用項目並自動同步。
 - 「新增」會在同一日期與時段開啟手寫輸入框；左側輸入區寬度約為該格 50%，右側「常用」下拉、同意與取消按鈕浮動在格子右上方，避免撐大該格。
-- 若該格已有項目，格內不顯示「＋新增」入口；需從項目展開功能列新增。若該格沒有項目，才顯示「＋新增」入口。
+- 格內不顯示「＋新增」文字入口；點擊格子背景時，直接在同一日期與時段開啟新增輸入框。
 - 「已完成」會切換刪除線樣式與 `is_done` 狀態。
 - 所有下拉式選單需使用深色背景，避免深色主題中白底造成文字不可讀。
 
@@ -311,11 +311,11 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 | 刪除 | 立即 `delete` |
 | 清除當日 | `delete().eq('instance_id',id).eq('todo_date', date)` |
 | 複製當日 | 讀取來源日 → 批次 `insert` 至目標日 |
-| 設定 | `upsert` app_settings |
-| 常用項目 | `upsert` app_settings.common_items |
-| 文字大小 | `upsert` app_settings.font_size |
+| 設定 | `update` app_settings `id=1` |
+| 常用項目 | `update` app_settings.common_items `id=1` |
+| 文字大小 | `update` app_settings.font_size `id=1` |
 
-> `updated_at` 不使用資料庫 trigger；所有 `update` / `upsert` 由前端帶入目前時間，確保最後更新時間可追蹤。
+> `updated_at` 不使用資料庫 trigger；所有 `insert` / `update` 由前端帶入目前時間，確保最後更新時間可追蹤。
 
 ---
 
@@ -358,9 +358,9 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 
 1. 顯示待辦（依 `sort_order`）
 2. 每筆預設只顯示：`⋮⋮`｜置中的單行待辦文字，不換行；過長時省略。
-3. 點擊格子 cell 或待辦項目後，顯示浮動功能列：`常用` 下拉｜`新增`｜`刪除`｜`已完成`。
-4. **空格無事項時**顯示「＋新增」；空格已有事項時隱藏「＋新增」。
-5. 從功能列點「新增」時，同格最上方浮動顯示半寬輸入框；「常用」下拉、同意與取消也浮動在格子右上方，所有新增相關功能皆不參與格內排版，因此不會改變該格尺寸。
+3. 點擊待辦項目後，顯示浮動功能列：`常用` 下拉｜`新增`｜`刪除`｜`已完成`。
+4. 格內不顯示「＋新增」文字；點擊格子背景時，直接開啟該日期與時段的新增輸入框。
+5. 新增時，同格最上方浮動顯示半寬輸入框；「常用」下拉、同意與取消也浮動在格子右上方，所有新增相關功能皆不參與格內排版，因此不會改變該格尺寸。
 
 ### 5.4 日期欄頭選單（清除／複製）
 
@@ -387,7 +387,7 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 | 外觀 Theme | 下拉式選單 |
 | 文字大小 | `medium` |
 | 常用設定 | 可新增／刪除常用項目 |
-| 儲存 | `upsert` 後重繪 |
+| 儲存 | `update` app_settings `id=1` 後重繪 |
 
 ### 5.6 載入與錯誤
 
@@ -541,7 +541,7 @@ ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "anon read settings" ON app_settings FOR SELECT TO anon USING (true);
-CREATE POLICY "anon upsert settings" ON app_settings FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon insert settings" ON app_settings FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "anon update settings" ON app_settings FOR UPDATE TO anon USING (true) WITH CHECK (true);
 
 CREATE POLICY "anon read todos" ON todos FOR SELECT TO anon USING (true);
@@ -550,7 +550,61 @@ CREATE POLICY "anon update todos" ON todos FOR UPDATE TO anon USING (true) WITH 
 CREATE POLICY "anon delete todos" ON todos FOR DELETE TO anon USING (true);
 ```
 
-> 本專案不使用資料庫 trigger。前端所有 `update` / `upsert` 都需一併送出 `updated_at` 欄位，例如 `updated_at: new Date().toISOString()`。
+> 本專案不使用資料庫 trigger。前端所有 `insert` / `update` 都需一併送出 `updated_at` 欄位，例如 `updated_at: new Date().toISOString()`。
+
+#### 既有 Supabase 專案修正
+
+若「常用設定」新增項目後顯示「設定同步失敗」，通常是既有 Supabase 專案的 `app_settings` 表尚未補上 `common_items` / `font_size` 欄位，或缺少 anon 更新權限。請到 **Supabase Dashboard → SQL Editor → New query** 執行：
+
+```sql
+ALTER TABLE app_settings
+  ADD COLUMN IF NOT EXISTS common_items jsonb NOT NULL DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS font_size text NOT NULL DEFAULT 'medium';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'app_settings_font_size_check'
+  ) THEN
+    ALTER TABLE app_settings
+      ADD CONSTRAINT app_settings_font_size_check
+      CHECK (font_size IN ('small', 'medium', 'large', 'xlarge'));
+  END IF;
+END $$;
+
+INSERT INTO app_settings (id) VALUES (1)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'app_settings'
+      AND policyname = 'anon read settings'
+  ) THEN
+    CREATE POLICY "anon read settings"
+      ON app_settings FOR SELECT TO anon
+      USING (true);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'app_settings'
+      AND policyname = 'anon update settings'
+  ) THEN
+    CREATE POLICY "anon update settings"
+      ON app_settings FOR UPDATE TO anon
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
+
+NOTIFY pgrst, 'reload schema';
+```
 
 ### 步驟 4：設定 URL（GitHub Pages 上線後）
 
@@ -603,6 +657,7 @@ function getInstanceId() {
 | v0.7 | 2026-06-26 | 調整：格子與項目皆可開啟浮動功能列；新增輸入半寬且控制列浮動；移除日期欄頭副文字；時間置中；現在格改用提醒色 |
 | v0.8 | 2026-06-26 | 修正：點擊「新增」後，新增輸入框與所有新增操作皆浮動於格子最上方，不影響格子尺寸 |
 | v0.9 | 2026-06-26 | 調整：移除本機暫存 fallback；Supabase 為唯一資料來源；同步完成以綠燈顯示「同步雲端」 |
+| v0.10 | 2026-06-27 | 調整：移除格內「＋新增」文字，點擊格子背景直接新增；設定同步改為更新 `app_settings.id=1`；補充既有 Supabase 專案修正 SQL |
 
 ---
 

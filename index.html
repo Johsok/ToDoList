@@ -757,24 +757,6 @@
       color: var(--text);
     }
 
-    .quick-add {
-      min-height: 32px;
-      width: 100%;
-      align-self: stretch;
-      padding: 0 8px;
-      justify-content: flex-start;
-      color: var(--muted);
-      background: transparent;
-      border: 1px dashed transparent;
-      cursor: text;
-    }
-
-    .quick-add:hover {
-      border-color: var(--grid);
-      color: var(--text);
-      background: var(--surface-soft);
-    }
-
     .add-row {
       position: absolute;
       left: 7px;
@@ -1579,9 +1561,7 @@
           slotCell.dataset.date = day;
           slotCell.dataset.time = slot;
           slotCell.setAttribute("role", "gridcell");
-          slotCell.innerHTML = (cellTodos.length ? renderCellActions(cellTodos[0]) : "") + cellTodos.map(renderTodo).join("") + (cellTodos.length ? "" : `
-            <button class="quick-add" type="button" data-add-date="${day}" data-add-time="${slot}">＋ 新增</button>
-          `);
+          slotCell.innerHTML = (cellTodos.length ? renderCellActions(cellTodos[0]) : "") + cellTodos.map(renderTodo).join("");
           grid.appendChild(slotCell);
         });
       });
@@ -1736,7 +1716,6 @@
 
       setSyncStatus("saving", "雲端儲存中…");
       const payload = {
-        id: 1,
         day_start: trimTime(state.settings.day_start),
         day_end: trimTime(state.settings.day_end),
         interval_minutes: Number(state.settings.interval_minutes),
@@ -1746,8 +1725,14 @@
         updated_at: new Date().toISOString()
       };
       try {
-        const { error } = await state.supabase.from("app_settings").upsert(payload, { onConflict: "id" });
+        const { data, error } = await state.supabase
+          .from("app_settings")
+          .update(payload)
+          .eq("id", 1)
+          .select("id")
+          .maybeSingle();
         if (error) throw error;
+        if (!data) throw new Error("找不到 app_settings id=1，請先在 Supabase 建立設定列。");
         setSyncStatus("saved", "同步雲端");
       } catch (error) {
         if (!isPermanentSupabaseError(error)) {
@@ -1782,10 +1767,7 @@
         return;
       }
 
-      const addButton = event.target.closest("[data-add-date]");
-      if (addButton) {
-        closeTodoActions();
-        showAddInput(addButton.dataset.addDate, addButton.dataset.addTime);
+      if (event.target.closest(".todo-actions")) {
         return;
       }
 
@@ -1795,13 +1777,8 @@
 
       const slot = event.target.closest(".slot-cell");
       if (slot) {
-        const firstTodo = slot.querySelector(".todo-item");
-        if (firstTodo) {
-          openSlotActions(slot, firstTodo.dataset.todoId);
-        } else {
-          closeTodoActions();
-          showAddInput(slot.dataset.date, slot.dataset.time);
-        }
+        closeTodoActions();
+        showAddInput(slot.dataset.date, slot.dataset.time);
       }
     }
 
@@ -1867,7 +1844,6 @@
       renderCalendar();
       const slot = els.calendarFrame.querySelector(`.slot-cell[data-date="${date}"][data-time="${time}"]`);
       if (!slot) return;
-      const addButton = slot.querySelector(".quick-add");
       const row = document.createElement("div");
       row.className = "add-row";
       row.innerHTML = `
@@ -1881,11 +1857,7 @@
           <button class="mini-button" type="button" data-add-cancel>×</button>
         </div>
       `;
-      if (addButton) {
-        addButton.replaceWith(row);
-      } else {
-        slot.appendChild(row);
-      }
+      slot.appendChild(row);
       row.querySelector("[data-add-submit]").addEventListener("click", () => submitAddInput(row.querySelector(".add-input")));
       row.querySelector("[data-add-cancel]").addEventListener("click", renderCalendar);
       row.querySelector(".add-common-select").addEventListener("change", (event) => {
