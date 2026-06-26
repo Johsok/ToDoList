@@ -388,11 +388,6 @@
       box-shadow: 0 0 14px rgba(255, 107, 107, 0.68);
     }
 
-    .sync-status[data-state="local"] .sync-dot {
-      background: var(--muted);
-      box-shadow: none;
-    }
-
     @keyframes pulse {
       from {
         opacity: 0.45;
@@ -781,14 +776,16 @@
     }
 
     .add-row {
+      position: absolute;
+      left: 7px;
+      top: 4px;
+      z-index: 13;
       display: grid;
       width: 50%;
       max-width: 50%;
       min-width: 0;
-      align-self: flex-start;
       grid-template-columns: minmax(0, 1fr);
       gap: 5px;
-      margin-top: 2px;
     }
 
     .add-controls {
@@ -1238,7 +1235,7 @@
             </div>
             <button class="text-button primary-button" id="saveSettingsBtn" type="button">儲存設定</button>
           </div>
-          <p class="hint">設定會同步到 Supabase；尚未填入金鑰時會先保存在本機。</p>
+          <p class="hint">設定會同步到 Supabase；此版本不使用本機暫存。</p>
         </section>
 
         <section class="panel-section">
@@ -1299,7 +1296,7 @@
     const state = {
       instanceId: "",
       supabase: null,
-      syncMode: "local",
+      syncMode: "cloud",
       settings: { ...DEFAULT_SETTINGS },
       todos: [],
       weekStart: "",
@@ -1358,20 +1355,18 @@
       els.jumpDateInput.value = todayKey();
       bindEvents();
       renderThemes();
-      applyStoredTheme();
       setSyncStatus("saving", "載入中…");
 
       state.supabase = await createSupabaseClient();
-      state.syncMode = state.supabase ? "cloud" : "local";
-      if (!state.supabase) {
-        setSyncStatus("local", "本機暫存");
-      }
+      state.syncMode = "cloud";
 
       await loadSettings();
       await loadTodosForCurrentRange();
       renderAll();
       scheduleCurrentSlotUpdate();
-      setSyncStatus(state.supabase ? "saved" : "local", state.supabase ? "已儲存" : "本機暫存");
+      if (els.syncStatus.dataset.state !== "error") {
+        setSyncStatus("saved", "同步雲端");
+      }
     }
 
     function bindEvents() {
@@ -1424,7 +1419,11 @@
 
     async function createSupabaseClient() {
       const configured = /^https:\/\/.+\.supabase\.co$/i.test(SUPABASE_URL.trim()) && SUPABASE_ANON_KEY.trim().length > 40;
-      if (!configured) return null;
+      if (!configured) {
+        setSyncStatus("error", "雲端未設定");
+        showToast("Supabase 設定不完整，無法同步雲端。");
+        return null;
+      }
 
       try {
         await loadScriptWithFallback([
@@ -1434,7 +1433,7 @@
         if (!window.supabase) throw new Error("Supabase SDK not found");
         return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       } catch (error) {
-        showToast("Supabase SDK 載入失敗，已切換為本機暫存。");
+        showToast("Supabase SDK 載入失敗，無法同步雲端。");
         console.warn(error);
         return null;
       }
@@ -1464,7 +1463,6 @@
 
     async function loadSettings() {
       let settings = { ...DEFAULT_SETTINGS };
-      const localSettings = readJson("todo_app_settings", null);
 
       if (state.supabase) {
         try {
@@ -1479,13 +1477,6 @@
           showToast("讀取雲端設定失敗，已使用預設值。");
           console.warn(error);
         }
-      } else if (localSettings) {
-        settings = normalizeSettings(localSettings);
-      }
-
-      const localTheme = localStorage.getItem("todo_theme");
-      if (isValidTheme(localTheme)) {
-        settings.theme_id = localTheme;
       }
 
       state.settings = settings;
@@ -1498,29 +1489,29 @@
       const end = addDaysKey(state.weekStart, 27);
       state.loadedRange = { start, end };
 
-      if (state.supabase) {
-        try {
-          const { data, error } = await state.supabase
-            .from("todos")
-            .select("*")
-            .eq("instance_id", state.instanceId)
-            .gte("todo_date", start)
-            .lte("todo_date", end)
-            .order("todo_date", { ascending: true })
-            .order("slot_start", { ascending: true })
-            .order("sort_order", { ascending: true });
-          if (error) throw error;
-          state.todos = (data || []).map(normalizeTodo);
-          return;
-        } catch (error) {
-          showToast("讀取雲端資料失敗，已改用本機暫存。");
-          console.warn(error);
-          state.syncMode = "local";
-          state.supabase = null;
-        }
+      if (!requireCloudClient()) {
+        state.todos = [];
+        return;
       }
 
-      state.todos = readLocalTodos().filter((todo) => todo.todo_date >= start && todo.todo_date <= end);
+      try {
+        const { data, error } = await state.supabase
+          .from("todos")
+          .select("*")
+          .eq("instance_id", state.instanceId)
+          .gte("todo_date", start)
+          .lte("todo_date", end)
+          .order("todo_date", { ascending: true })
+          .order("slot_start", { ascending: true })
+          .order("sort_order", { ascending: true });
+        if (error) throw error;
+        state.todos = (data || []).map(normalizeTodo);
+      } catch (error) {
+        state.todos = [];
+        setSyncStatus("error", "讀取雲端失敗");
+        showToast("讀取雲端資料失敗，請確認 Supabase 連線。");
+        console.warn(error);
+      }
     }
 
     function renderAll() {
@@ -1714,7 +1705,6 @@
     async function changeTheme(themeId) {
       if (!isValidTheme(themeId)) return;
       state.settings.theme_id = themeId;
-      localStorage.setItem("todo_theme", themeId);
       applyTheme(themeId);
       renderThemes();
       await persistSettings();
@@ -1741,9 +1731,7 @@
     }
 
     async function persistSettings() {
-      writeJson("todo_app_settings", state.settings);
-      if (!state.supabase) {
-        setSyncStatus("local", "本機暫存");
+      if (!requireCloudClient()) {
         return;
       }
 
@@ -1761,7 +1749,7 @@
       try {
         const { error } = await state.supabase.from("app_settings").upsert(payload, { onConflict: "id" });
         if (error) throw error;
-        setSyncStatus("saved", "已儲存");
+        setSyncStatus("saved", "同步雲端");
       } catch (error) {
         queueRetry(() => persistSettings());
         setSyncStatus("error", "無法同步，將自動重試");
@@ -1917,6 +1905,7 @@
     }
 
     async function addTodo(date, time, content) {
+      if (!requireCloudClient()) return;
       const sortOrder = getTodosForCell(date, time).length;
       const todo = normalizeTodo({
         id: `local-${crypto.randomUUID()}`,
@@ -1930,24 +1919,15 @@
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
-      state.todos.push(todo);
-      saveLocalTodos();
-      renderCalendar();
-
-      if (!state.supabase) {
-        setSyncStatus("local", "本機暫存");
-        return;
-      }
 
       setSyncStatus("saving", "雲端儲存中…");
       try {
         const payload = toSupabasePayload(todo, false);
         const { data, error } = await state.supabase.from("todos").insert(payload).select().single();
         if (error) throw error;
-        replaceTodo(todo.id, normalizeTodo(data));
-        saveLocalTodos();
+        state.todos.push(normalizeTodo(data));
         renderCalendar();
-        setSyncStatus("saved", "已儲存");
+        setSyncStatus("saved", "同步雲端");
       } catch (error) {
         queueRetry(() => addTodo(date, time, content));
         setSyncStatus("error", "無法同步，將自動重試");
@@ -1957,11 +1937,9 @@
 
     async function updateTodo(todo, patch, options = {}) {
       Object.assign(todo, patch, { updated_at: new Date().toISOString() });
-      saveLocalTodos();
       if (!options.skipRender) renderCalendar();
 
-      if (!state.supabase || isLocalId(todo.id)) {
-        setSyncStatus("local", "本機暫存");
+      if (!requireCloudClient() || isLocalId(todo.id)) {
         return;
       }
 
@@ -1973,7 +1951,7 @@
           .eq("id", todo.id)
           .eq("instance_id", state.instanceId);
         if (error) throw error;
-        setSyncStatus("saved", "已儲存");
+        setSyncStatus("saved", "同步雲端");
       } catch (error) {
         queueRetry(() => updateTodo(todo, patch, options));
         setSyncStatus("error", "無法同步，將自動重試");
@@ -1999,7 +1977,7 @@
           updateTodo(todo, patch, { skipRender: true });
         }, 5000));
       }
-      setSyncStatus(state.supabase ? "saving" : "local", state.supabase ? "雲端儲存中…" : "本機暫存");
+      setSyncStatus(state.supabase ? "saving" : "error", state.supabase ? "雲端儲存中…" : "雲端未連線");
     }
 
     async function toggleTodo(todo) {
@@ -2011,14 +1989,12 @@
     }
 
     async function deleteTodo(todo) {
-      state.todos = state.todos.filter((item) => String(item.id) !== String(todo.id));
-      saveLocalTodos();
-      renderCalendar();
-
-      if (!state.supabase || isLocalId(todo.id)) {
-        setSyncStatus("local", "本機暫存");
+      if (!requireCloudClient() || isLocalId(todo.id)) {
         return;
       }
+
+      state.todos = state.todos.filter((item) => String(item.id) !== String(todo.id));
+      renderCalendar();
 
       setSyncStatus("saving", "雲端儲存中…");
       try {
@@ -2028,7 +2004,7 @@
           .eq("id", todo.id)
           .eq("instance_id", state.instanceId);
         if (error) throw error;
-        setSyncStatus("saved", "已儲存");
+        setSyncStatus("saved", "同步雲端");
       } catch (error) {
         queueRetry(() => deleteTodo(todo));
         setSyncStatus("error", "無法同步，將自動重試");
@@ -2118,11 +2094,9 @@
         todo.updated_at = new Date().toISOString();
         return todo;
       });
-      saveLocalTodos();
       renderCalendar();
 
-      if (!state.supabase) {
-        setSyncStatus("local", "本機暫存");
+      if (!requireCloudClient()) {
         return;
       }
 
@@ -2143,7 +2117,7 @@
         const results = await Promise.all(cloudUpdates);
         const failed = results.find((result) => result.error);
         if (failed) throw failed.error;
-        setSyncStatus("saved", "已儲存");
+        setSyncStatus("saved", "同步雲端");
       } catch (error) {
         queueRetry(() => persistOrder(cellTodos));
         setSyncStatus("error", "無法同步，將自動重試");
@@ -2179,16 +2153,11 @@
       const date = state.selectedDay;
       if (!date) return;
       if (!confirm(`確定清除 ${formatShortDate(date)} 全部行程？`)) return;
+      if (!requireCloudClient()) return;
       const deleted = state.todos.filter((todo) => todo.todo_date === date);
       state.todos = state.todos.filter((todo) => todo.todo_date !== date);
-      saveLocalTodos();
       closeDayMenu();
       renderCalendar();
-
-      if (!state.supabase) {
-        setSyncStatus("local", "本機暫存");
-        return;
-      }
 
       setSyncStatus("saving", "雲端儲存中…");
       try {
@@ -2198,10 +2167,9 @@
           .eq("instance_id", state.instanceId)
           .eq("todo_date", date);
         if (error) throw error;
-        setSyncStatus("saved", "已儲存");
+        setSyncStatus("saved", "同步雲端");
       } catch (error) {
         state.todos.push(...deleted);
-        saveLocalTodos();
         renderCalendar();
         queueRetry(() => clearSelectedDay());
         setSyncStatus("error", "無法同步，將自動重試");
@@ -2223,6 +2191,7 @@
         showToast("該日沒有可複製的事項。");
         return;
       }
+      if (!requireCloudClient()) return;
 
       const copies = sourceTodos.map((todo, index) => normalizeTodo({
         id: `local-${crypto.randomUUID()}`,
@@ -2237,25 +2206,15 @@
         updated_at: new Date().toISOString()
       }));
 
-      state.todos.push(...copies);
-      saveLocalTodos();
-      closeDayMenu();
-      renderCalendar();
-
-      if (!state.supabase) {
-        setSyncStatus("local", "本機暫存");
-        return;
-      }
-
       setSyncStatus("saving", "雲端儲存中…");
       try {
         const payload = copies.map((todo) => toSupabasePayload(todo, false));
         const { data, error } = await state.supabase.from("todos").insert(payload).select();
         if (error) throw error;
-        copies.forEach((copy, index) => replaceTodo(copy.id, normalizeTodo(data[index])));
-        saveLocalTodos();
+        state.todos.push(...(data || []).map(normalizeTodo));
+        closeDayMenu();
         renderCalendar();
-        setSyncStatus("saved", "已儲存");
+        setSyncStatus("saved", "同步雲端");
       } catch (error) {
         queueRetry(() => copySelectedDay());
         setSyncStatus("error", "無法同步，將自動重試");
@@ -2309,6 +2268,13 @@
           console.warn(error);
         }
       }
+    }
+
+    function requireCloudClient() {
+      if (state.supabase) return true;
+      setSyncStatus("error", "雲端未連線");
+      showToast("目前無法連線 Supabase，資料不會存到本機暫存。");
+      return false;
     }
 
     function setSyncStatus(stateName, text) {
@@ -2448,41 +2414,13 @@
       return id;
     }
 
-    function applyStoredTheme() {
-      const themeId = localStorage.getItem("todo_theme");
-      applyTheme(isValidTheme(themeId) ? themeId : DEFAULT_SETTINGS.theme_id);
-    }
-
     function applyTheme(themeId) {
       const safeTheme = isValidTheme(themeId) ? themeId : DEFAULT_SETTINGS.theme_id;
       els.body.dataset.theme = safeTheme;
-      localStorage.setItem("todo_theme", safeTheme);
     }
 
     function isValidTheme(themeId) {
       return THEMES.some((theme) => theme.id === themeId);
-    }
-
-    function readLocalTodos() {
-      return readJson(`todo_items_${state.instanceId}`, []).map(normalizeTodo);
-    }
-
-    function saveLocalTodos() {
-      writeJson(`todo_items_${state.instanceId}`, state.todos);
-    }
-
-    function readJson(key, fallback) {
-      try {
-        const raw = localStorage.getItem(key);
-        return raw ? JSON.parse(raw) : fallback;
-      } catch (error) {
-        console.warn(error);
-        return fallback;
-      }
-    }
-
-    function writeJson(key, value) {
-      localStorage.setItem(key, JSON.stringify(value));
     }
 
     function todayKey() {
