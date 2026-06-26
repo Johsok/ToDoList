@@ -1746,7 +1746,7 @@
           .select("id")
           .maybeSingle();
         if (error) throw error;
-        if (!data) throw new Error("找不到 app_settings id=1，請先在 Supabase 建立設定列。");
+        if (!data) throw new Error("app_settings id=1 已存在但無法由 anon 更新，請檢查 Supabase RLS 的 SELECT / INSERT / UPDATE policy。");
         setSyncStatus("saved", "同步雲端");
       } catch (error) {
         if (!isPermanentSupabaseError(error)) {
