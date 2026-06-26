@@ -24,7 +24,7 @@
 | # | 項目 | 決定 |
 |---|------|------|
 | A | 登入 | **不需登入畫面**；`instance_id` 背景自動處理 |
-| B | 週起始與手勢 | **週一**起算；手機**右滑** → 下一週 |
+| B | 週起始與切換 | **週一**起算；手機用上週／今天／下週符號按鈕切換 |
 | C | 同格多筆 | **可以** |
 | D | 事項操作 | **編輯 / 新增 / 刪除 / 勾選** |
 | E | 拖曳 | 同格排序；跨日期／時段移動 |
@@ -38,6 +38,7 @@
 | **M** | **顏色標籤** | 重要事項可標示不同顏色 |
 | **N** | **常用項目** | 可在設定中維護常用待辦，並於每筆項目的下拉選單套用 |
 | **O** | **文字大小設定** | 設定中可選待辦文字大小，並同步記憶至 Supabase |
+| **P** | **今日／整週顯示** | 日期區間右側可切換「今」與「週」，並同步記憶至 Supabase |
 
 ### 1.3 技術棧
 
@@ -73,6 +74,7 @@
 | 15 | **常用項目設定** | 設定中新增／刪除常用項目，寫入 Supabase，任務卡可下拉套用 | ✅ 新增 |
 | 16 | **文字大小設定** | 可選小／中／大／特大，設定同步至 Supabase | ✅ 新增 |
 | 17 | **每日欄寬自動貼齊** | 每日欄依該欄最長待辦文字自動收斂，避免 7 欄平均撐寬 | ✅ 新增 |
+| 18 | **今日／整週顯示模式** | 「今」只顯示今日事項且同時段橫向排列；「週」顯示整週且同時段縱向排列 | ✅ 新增 |
 
 ---
 
@@ -87,15 +89,16 @@
 ### 3.2 週視圖
 
 - 一週 = 週一～週日
-- 導覽：◀ 上週｜本週｜下週 ▶；手機右滑下一週
+- 導覽：◀ 上週｜本週｜下週 ▶；手機以標題列右側符號按鈕切換，不用左右滑動換週或換月
 - 格子座標 = `todo_date` + `slot_start`
 - 日期欄頭格式為 `MM/DD(週)`，例如 `06/12(一)`；不顯示額外副文字。
 
-### 3.3 縱向瀏覽（下週／下個月）
+### 3.3 瀏覽與邊界滑動
 
 - 主內容區可縱向連續捲動多週
 - 懶加載：目前週 ± 2 週；接近底部載入更多
 - 「本月」「下月」快速跳轉按鈕（v1 納入）
+- 手機橫向捲到週表最左或最右時，不自動切換上週、下週、上月或下月。
 
 ### 3.4 年月日跳轉（L）
 
@@ -254,6 +257,14 @@
 - 設定會同步到 `app_settings.font_size`，下次開啟頁面時套用。
 - 文字大小主要影響待辦項目文字，不改變週曆核心邏輯。
 
+### 3.14 今日／整週顯示模式（P）
+
+- 日期區間右側提供兩個小型 UI 按鈕：`今`、`週`。
+- `今`：只顯示今日所有事項；同一時段內的多筆事項向右橫向排列。
+- `週`：顯示週一至週日；同一時段內的多筆事項維持向下縱向排列。
+- 顯示模式儲存在 `app_settings.view_mode`，允許值為 `today` / `week`，預設 `week`。
+- 每次切換後立即同步到 Supabase；下次開啟時依 Supabase 記憶值還原。
+
 ---
 
 ## 4. 資料庫設計（Supabase）
@@ -269,9 +280,10 @@
 | `theme_id` | `text` | 預設 `'dark'`；允許 10 種經典配色 theme |
 | `common_items` | `jsonb` | 預設 `[]`；常用待辦項目文字陣列 |
 | `font_size` | `text` | 預設 `'medium'`；允許 `small`、`medium`、`large`、`xlarge` |
+| `view_mode` | `text` | 預設 `'week'`；允許 `today`、`week` |
 | `updated_at` | `timestamptz` | 最後更新；由前端每次更新時帶入目前時間 |
 
-> `app_settings` 採全域設定，固定 `id = 1`。本專案以「打開即可用、方便優先」為目標，因此所有公開使用者共用同一組起始時間、結束時間、間隔時間、全域 theme、文字大小與常用項目設定；個別瀏覽器仍可用 `localStorage.todo_theme` 記住本機偏好的 theme。
+> `app_settings` 採全域設定，固定 `id = 1`。本專案以「打開即可用、方便優先」為目標，因此所有公開使用者共用同一組起始時間、結束時間、間隔時間、全域 theme、文字大小、顯示模式與常用項目設定。
 
 ### 4.2 資料表：`todos`
 
@@ -317,6 +329,7 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 | 設定 | `update` app_settings `id=1` |
 | 常用項目 | `update` app_settings.common_items `id=1` |
 | 文字大小 | `update` app_settings.font_size `id=1` |
+| 顯示模式 | `update` app_settings.view_mode `id=1` |
 
 > `updated_at` 不使用資料庫 trigger；所有 `insert` / `update` 由前端帶入目前時間，確保最後更新時間可追蹤。
 
@@ -330,7 +343,7 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 ┌────────────────────────────────────────────────────────────────┐
 │ 週間待辦          [2026▼][6月▼][26日▼][前往]    [設定]  已儲存 ✓ │
 ├────────────────────────────────────────────────────────────────┤
-│ ◀ 上週      2026/06/23（一）~ 06/29（日）           下週 ▶    │
+│          2026/06/23（一）~ 06/29（日）      [今] [週]          │
 ├────────┬─────────┬────┬────┬────┬────┬────┬──────────────────┤
 │ 時間 ↕ │06/23(一)│06/24(二)│06/25(三)│06/26(四)│06/27(五)│06/28(六)│06/29(日)│
 │        │ [點選]  │        │        │        │        │        │        │
@@ -355,6 +368,7 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 | 同步狀態 | 右上角小字「已儲存」／「儲存中…」 |
 
 - 每日欄頭僅顯示日期與星期，格式為 `MM/DD(週)`，例如 `06/12(一)`；不顯示「今天」或「點選操作」副文字。
+- 日期區間文字需比主標題小，右側同列放置「今」「週」顯示模式按鈕。
 - 左側時間欄文字需水平與垂直置中。
 - 每日欄寬需依該欄最長待辦文字自動計算；新增、編輯、刪除、套用常用項目或調整文字大小後都要重新貼齊，避免所有日期欄平均撐得過寬。
 
@@ -364,7 +378,7 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 2. 每筆預設只顯示：`⋮⋮`｜置中的單行待辦文字，不換行；過長時省略。
 3. 點擊待辦項目後，顯示浮動功能列：`常用` 下拉｜`新增`｜`刪除`｜`已完成`。
 4. 格內不顯示「＋新增」文字；點擊格子背景時，直接開啟該日期與時段的新增輸入框。
-5. 新增時，同格最上方浮動顯示「輸入其他文字」輸入框；「選常用」下拉可快速帶入常用項目，也可直接手寫任意文字。
+5. 新增時，同格最上方浮動顯示「輸入其他文字」輸入框；「選常用」下拉只做快速帶入，電腦版與手機版都必須可直接手寫任意文字。
 6. 新增相關控制（輸入框、常用下拉、同意、取消）皆不參與格內排版，因此不會改變該格尺寸。
 
 ### 5.4 日期欄頭選單（清除／複製）
@@ -394,7 +408,7 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 | 常用設定 | 可新增／刪除常用項目 |
 | 儲存 | `update` app_settings `id=1` 後重繪 |
 
-手機版點「設定」時，設定面板需以浮動面板顯示在目前畫面上方，內容包含週切換、日期跳轉、同步狀態、Theme、每日時段、文字大小與常用設定；手機主畫面不另放「清除本日」與「複製本日」按鈕。
+手機版點「設定」時，設定面板需以浮動面板顯示在目前畫面上方，內容包含日期跳轉、同步狀態、Theme、每日時段、文字大小與常用設定；週切換的上週／今天／下週符號按鈕需移到主畫面「設定」左側。手機主畫面不另放「清除本日」與「複製本日」按鈕。
 
 ### 5.6 載入與錯誤
 
@@ -410,17 +424,17 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 |------|------|
 | 桌機 ≥1024px | 7 欄；滑鼠拖曳；日期下拉選單 |
 | 平板 768–1023px | 橫向捲動週欄 |
-| 手機 <768px | 主畫面只保留標題／設定、當週日期、週表格；右滑換週；日期 Sheet；空白格點擊新增；觸控 ≥44px |
+| 手機 <768px | 主畫面保留標題、上週／今天／下週符號按鈕、設定、日期區間、週表格；日期 Sheet；空白格點擊新增 |
 
-**手勢防衝突**：日期標題列滑動 = 換週；格子內橫滑 = 捲動欄位。
+**手勢防衝突**：格子內橫滑只做欄位捲動；滑到最左或最右時不觸發上週、下週、上月或下月切換。
 
 **欄寬策略**：週表不平均分配所有剩餘寬度；每個日期欄依該欄最長文字自動貼齊，必要時由 `.calendar-frame` 提供橫向捲動。
 
 **手機主畫面**：
-1. 第一列只顯示「週待辦清單」與「設定」。
-2. 第二列只顯示當週日期範圍，例如 `2026/06/08 (一) ~ 06/14 (日)`。
+1. 第一列顯示「週待辦清單」、上週／今天／下週符號按鈕與「設定」。
+2. 第二列顯示日期範圍與「今」「週」切換，例如 `2026/06/08 (一) ~ 06/14 (日)`。
 3. 第三列開始顯示該週表格，表格需凍結左側時間欄與第一列日期欄。
-4. 週切換、日期跳轉與同步狀態集中於「設定」面板；「清除本日」與「複製本日」不在手機主畫面或設定面板中顯示，改由點日期欄頭開啟操作。
+4. 日期跳轉與同步狀態集中於「設定」面板；「清除本日」與「複製本日」不在手機主畫面或設定面板中顯示，改由點日期欄頭開啟操作。
 
 ---
 
@@ -475,7 +489,9 @@ ToDoList/
 20. 新增事項時可選常用項目，也可直接輸入其他文字
 21. 每日欄寬會在新增／編輯項目後依該欄最長文字自動貼齊，表格不因平均分欄而過寬
 22. 手機版點「設定」需立即顯示可操作的設定面板
-23. 手機主畫面只保留標題／設定列、週日期列與週表格；時間欄與日期欄需可凍結捲動
+23. 手機主畫面保留標題、上週／今天／下週符號按鈕、設定、日期區間與週表格；時間欄與日期欄需可凍結捲動
+24. 「今」「週」顯示模式切換後可同步到 Supabase，重新整理後仍保留
+25. 手機橫向滑到表格最左或最右時，不自動切換上週、下週、上月或下月
 
 ---
 
@@ -534,6 +550,8 @@ CREATE TABLE app_settings (
   common_items jsonb NOT NULL DEFAULT '[]'::jsonb,
   font_size text NOT NULL DEFAULT 'medium'
     CHECK (font_size IN ('small', 'medium', 'large', 'xlarge')),
+  view_mode text NOT NULL DEFAULT 'week'
+    CHECK (view_mode IN ('today', 'week')),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -574,12 +592,13 @@ CREATE POLICY "anon delete todos" ON todos FOR DELETE TO anon USING (true);
 
 #### 既有 Supabase 專案修正
 
-若「常用設定」新增項目後顯示「設定同步失敗」，通常是既有 Supabase 專案的 `app_settings` 表尚未補上 `common_items` / `font_size` 欄位，或缺少 anon 更新權限。請到 **Supabase Dashboard → SQL Editor → New query** 執行：
+若「常用設定」新增項目或「今／週」切換後顯示「設定同步失敗」，通常是既有 Supabase 專案的 `app_settings` 表尚未補上 `common_items` / `font_size` / `view_mode` 欄位，或缺少 anon 更新權限。請到 **Supabase Dashboard → SQL Editor → New query** 執行：
 
 ```sql
 ALTER TABLE app_settings
   ADD COLUMN IF NOT EXISTS common_items jsonb NOT NULL DEFAULT '[]'::jsonb,
-  ADD COLUMN IF NOT EXISTS font_size text NOT NULL DEFAULT 'medium';
+  ADD COLUMN IF NOT EXISTS font_size text NOT NULL DEFAULT 'medium',
+  ADD COLUMN IF NOT EXISTS view_mode text NOT NULL DEFAULT 'week';
 
 DO $$
 BEGIN
@@ -589,6 +608,14 @@ BEGIN
     ALTER TABLE app_settings
       ADD CONSTRAINT app_settings_font_size_check
       CHECK (font_size IN ('small', 'medium', 'large', 'xlarge'));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'app_settings_view_mode_check'
+  ) THEN
+    ALTER TABLE app_settings
+      ADD CONSTRAINT app_settings_view_mode_check
+      CHECK (view_mode IN ('today', 'week'));
   END IF;
 END $$;
 
@@ -680,6 +707,7 @@ function getInstanceId() {
 | v0.10 | 2026-06-27 | 調整：移除格內「＋新增」文字，點擊格子背景直接新增；設定同步改為更新 `app_settings.id=1`；補充既有 Supabase 專案修正 SQL |
 | v0.11 | 2026-06-27 | 調整：日期欄頭改為 `MM/DD(週)`；每日欄寬依最長待辦文字自動貼齊；新增事項支援常用項目與其他文字輸入 |
 | v0.12 | 2026-06-27 | 調整：手機版設定改為浮動面板；手機主畫面只保留標題／設定、週日期與表格；週切換、日期跳轉與同步狀態移入手機設定面板 |
+| v0.13 | 2026-06-27 | 調整：手機週切換移到設定左側符號按鈕；停用左右滑邊界自動切換；新增「今／週」顯示模式與 `view_mode` 設定 |
 
 ---
 
@@ -739,7 +767,7 @@ function getInstanceId() {
   - `06:00` - `22:00`，間隔 `30` 分鐘。
   - `05:00` - `23:00`，間隔 `10` 分鐘。
 - 設定需同步到 Supabase 的 `app_settings`，並可作為全域設定讀取。
-- 若 Supabase 讀取失敗，使用預設值：`06:00`、`22:00`、`30`、`dark`。
+- 若 Supabase 讀取失敗，使用預設值：`06:00`、`22:00`、`30`、`dark`、`week`。
 
 #### 設定面板建議呈現
 
@@ -767,6 +795,7 @@ function getInstanceId() {
 | `theme_id` | `text` | `'dark'` | 目前使用的全域 theme；前端以 Supabase `app_settings` 為準，不使用本機暫存。 |
 | `common_items` | `jsonb` | `[]` | 常用待辦項目文字陣列，供每筆待辦的「常用」下拉選單套用。 |
 | `font_size` | `text` | `'medium'` | 待辦項目文字大小設定，允許 `small`、`medium`、`large`、`xlarge`。 |
+| `view_mode` | `text` | `'week'` | 日期區間右側「今／週」顯示模式，允許 `today`、`week`。 |
 
 建議允許值：`dark`、`midnight`、`forest`、`sunrise`、`minimal`、`classic_blue`、`nord`、`dracula`、`solarized`、`high_contrast`。
 

@@ -316,6 +316,10 @@
       flex-wrap: wrap;
     }
 
+    .mobile-quick-nav {
+      display: none;
+    }
+
     .icon-button,
     .text-button {
       padding: 0 14px;
@@ -428,14 +432,53 @@
       min-width: 0;
     }
 
+    .range-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
     .week-title {
       margin: 0;
       display: inline-flex;
       align-items: center;
       gap: 10px;
       min-width: 0;
-      font-size: 22px;
+      font-size: 16px;
       line-height: 1.25;
+    }
+
+    .week-title span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .view-toggle {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px;
+      border: 1px solid var(--grid);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+    }
+
+    .view-mode-button {
+      width: 36px;
+      min-height: 32px;
+      padding: 0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .view-mode-button.is-active {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent), transparent 70%);
+      color: var(--text);
     }
 
     .calendar-icon {
@@ -493,6 +536,11 @@
       align-items: stretch;
     }
 
+    .schedule-grid.is-today-view {
+      width: 100%;
+      grid-template-columns: var(--time-col) minmax(0, 1fr);
+    }
+
     .grid-cell {
       min-width: 0;
       border-right: 1px solid var(--grid);
@@ -500,6 +548,10 @@
     }
 
     .grid-cell:nth-child(8n) {
+      border-right: 0;
+    }
+
+    .schedule-grid.is-today-view .grid-cell:nth-child(2n) {
       border-right: 0;
     }
 
@@ -605,6 +657,18 @@
 
     .slot-cell.has-todos {
       align-items: center;
+    }
+
+    .schedule-grid.is-today-view .slot-cell {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+
+    .schedule-grid.is-today-view .todo-item {
+      flex: 0 0 auto;
     }
 
     .slot-cell.is-today {
@@ -778,23 +842,22 @@
     .add-row {
       position: absolute;
       left: 7px;
+      right: 7px;
       top: 4px;
       z-index: 13;
       display: grid;
-      width: 50%;
-      max-width: 50%;
+      width: auto;
+      max-width: none;
       min-width: 0;
       grid-template-columns: minmax(0, 1fr);
       gap: 5px;
     }
 
     .add-controls {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      z-index: 13;
       display: flex;
       align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
       gap: 5px;
       padding: 4px;
       border: 1px solid var(--grid);
@@ -820,7 +883,9 @@
     }
 
     .add-common-select {
-      min-width: 78px;
+      flex: 1 1 78px;
+      min-width: 0;
+      max-width: 128px;
       min-height: 36px;
       border: 1px solid var(--grid);
       border-radius: 7px;
@@ -1119,20 +1184,45 @@
       .top-actions {
         width: auto;
         justify-content: flex-end;
+        gap: 6px;
       }
 
       .top-actions .text-button {
         flex: 0 0 auto;
       }
 
+      .mobile-quick-nav {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .mobile-symbol-button {
+        width: 34px;
+        min-height: 34px;
+        flex: 0 0 34px;
+        font-size: 17px;
+      }
+
       .calendar-toolbar {
-        display: block;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .range-bar {
+        flex: 1 1 auto;
+        justify-content: center;
       }
 
       .week-title {
         justify-content: center;
-        font-size: 17px;
+        font-size: 14px;
         text-align: center;
+      }
+
+      .view-mode-button {
+        width: 34px;
+        min-height: 30px;
       }
 
       .main-layout,
@@ -1183,8 +1273,7 @@
         border-top: 1px solid var(--grid-soft);
       }
 
-      .mobile-settings-row,
-      .mobile-week-nav {
+      .mobile-settings-row {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -1194,7 +1283,6 @@
         margin-top: 10px;
       }
 
-      .mobile-week-nav .text-button,
       .mobile-settings-row .text-button,
       .mobile-settings-row .date-input {
         flex: 1 1 auto;
@@ -1257,6 +1345,11 @@
       </div>
 
       <div class="top-actions">
+        <div class="mobile-quick-nav" aria-label="週切換">
+          <button class="icon-button mobile-symbol-button" id="mobilePrevWeekBtn" type="button" title="上週" aria-label="上週">‹</button>
+          <button class="icon-button mobile-symbol-button" id="mobileTodayBtn" type="button" title="今天" aria-label="今天">今</button>
+          <button class="icon-button mobile-symbol-button" id="mobileNextWeekBtn" type="button" title="下週" aria-label="下週">›</button>
+        </div>
         <button class="text-button" id="settingsBtn" type="button" aria-expanded="false" aria-controls="settingsPanel">⚙ 設定</button>
         <div class="sync-status" id="syncStatus" data-state="saving" aria-live="polite">
           <span id="syncText">載入中…</span>
@@ -1268,10 +1361,16 @@
     <main class="main-layout">
       <section class="calendar-area" aria-label="週間時段待辦">
         <div class="calendar-toolbar">
-          <h2 class="week-title">
-            <span class="calendar-icon" aria-hidden="true"></span>
-            <span id="weekTitle">載入中…</span>
-          </h2>
+          <div class="range-bar" aria-label="日期區間">
+            <h2 class="week-title">
+              <span class="calendar-icon" aria-hidden="true"></span>
+              <span id="weekTitle">載入中…</span>
+            </h2>
+            <div class="view-toggle" aria-label="顯示模式">
+              <button class="view-mode-button" id="todayViewBtn" type="button" aria-pressed="false" title="今日">今</button>
+              <button class="view-mode-button" id="weekViewBtn" type="button" aria-pressed="true" title="整週">週</button>
+            </div>
+          </div>
           <div class="day-actions">
             <button class="text-button danger-button" id="clearTodayBtn" type="button">清除本日</button>
             <button class="text-button" id="copyTodayBtn" type="button">複製本日</button>
@@ -1285,12 +1384,7 @@
 
       <aside class="settings-panel" id="settingsPanel" hidden>
         <section class="panel-section mobile-settings-tools">
-          <h2 class="section-title">週表操作</h2>
-          <div class="mobile-week-nav" aria-label="週切換">
-            <button class="text-button" id="mobilePrevWeekBtn" type="button">上週</button>
-            <button class="text-button" id="mobileTodayBtn" type="button">今天</button>
-            <button class="text-button" id="mobileNextWeekBtn" type="button">下週</button>
-          </div>
+          <h2 class="section-title">日期跳轉</h2>
           <div class="mobile-settings-row" aria-label="日期跳轉">
             <input class="date-input" id="mobileJumpDateInput" type="date" aria-label="選擇日期">
             <button class="text-button primary-button" id="mobileGoDateBtn" type="button">前往</button>
@@ -1337,7 +1431,6 @@
             </div>
             <button class="text-button primary-button" id="saveSettingsBtn" type="button">儲存設定</button>
           </div>
-          <p class="hint">設定會同步到 Supabase；此版本不使用本機暫存。</p>
         </section>
 
         <section class="panel-section">
@@ -1347,7 +1440,6 @@
             <button class="text-button primary-button" id="addCommonItemBtn" type="button">新增</button>
           </div>
           <div class="common-list" id="commonItemsList"></div>
-          <p class="hint">常用項目會存入 Supabase，之後可從每個待辦項目的「常用」下拉選單套用。</p>
         </section>
       </aside>
     </main>
@@ -1372,6 +1464,8 @@
     const SUPABASE_URL = "https://doicpmczzvharnszpbsr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_c46aC5fxRALpXswtxy8aIA_E-LHxIu9";
     const APP_SETTINGS_ID = 1;
+    const SETTINGS_SELECT_FIELDS = "day_start, day_end, interval_minutes, theme_id, font_size, common_items, view_mode";
+    const LEGACY_SETTINGS_SELECT_FIELDS = "day_start, day_end, interval_minutes, theme_id, font_size, common_items";
 
     const DEFAULT_SETTINGS = {
       day_start: "06:00",
@@ -1379,6 +1473,7 @@
       interval_minutes: 30,
       theme_id: "dark",
       font_size: "medium",
+      view_mode: "week",
       common_items: []
     };
 
@@ -1414,8 +1509,7 @@
       dirtyMaxTimers: new Map(),
       retryQueue: [],
       retryTimer: null,
-      currentTimer: null,
-      touchStart: null
+      currentTimer: null
     };
 
     const els = {
@@ -1432,6 +1526,8 @@
       mobilePrevWeekBtn: document.getElementById("mobilePrevWeekBtn"),
       mobileNextWeekBtn: document.getElementById("mobileNextWeekBtn"),
       mobileTodayBtn: document.getElementById("mobileTodayBtn"),
+      todayViewBtn: document.getElementById("todayViewBtn"),
+      weekViewBtn: document.getElementById("weekViewBtn"),
       clearTodayBtn: document.getElementById("clearTodayBtn"),
       copyTodayBtn: document.getElementById("copyTodayBtn"),
       settingsBtn: document.getElementById("settingsBtn"),
@@ -1489,6 +1585,8 @@
       els.mobilePrevWeekBtn.addEventListener("click", () => shiftWeek(-7));
       els.mobileNextWeekBtn.addEventListener("click", () => shiftWeek(7));
       els.mobileTodayBtn.addEventListener("click", () => goToDate(todayKey()));
+      els.todayViewBtn.addEventListener("click", () => changeViewMode("today"));
+      els.weekViewBtn.addEventListener("click", () => changeViewMode("week"));
       els.mobileGoDateBtn.addEventListener("click", () => goToDate(els.mobileJumpDateInput.value || todayKey()));
       els.jumpDateInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
@@ -1514,8 +1612,6 @@
       els.calendarFrame.addEventListener("dragleave", handleDragLeave);
       els.calendarFrame.addEventListener("drop", handleDrop);
       els.calendarFrame.addEventListener("dragend", clearDragStyles);
-      els.calendarFrame.addEventListener("touchstart", handleTouchStart, { passive: true });
-      els.calendarFrame.addEventListener("touchend", handleTouchEnd);
 
       els.themeSelect.addEventListener("change", () => changeTheme(els.themeSelect.value));
       els.addCommonItemBtn.addEventListener("click", addCommonItem);
@@ -1594,21 +1690,35 @@
 
       if (state.supabase) {
         try {
-          const { data, error } = await state.supabase
-            .from("app_settings")
-            .select("day_start, day_end, interval_minutes, theme_id, font_size, common_items")
-            .eq("id", APP_SETTINGS_ID)
-            .maybeSingle();
-          if (error) throw error;
+          const data = await readSettingsRow(true);
           settings = normalizeSettings(data || DEFAULT_SETTINGS);
         } catch (error) {
-          reportSupabaseError(error, "讀取雲端設定失敗");
+          if (isMissingViewModeColumnError(error)) {
+            try {
+              const data = await readSettingsRow(false);
+              settings = normalizeSettings(data || DEFAULT_SETTINGS);
+            } catch (legacyError) {
+              reportSupabaseError(legacyError, "讀取雲端設定失敗");
+            }
+          } else {
+            reportSupabaseError(error, "讀取雲端設定失敗");
+          }
         }
       }
 
       state.settings = settings;
       fillSettingsForm();
       applyTheme(settings.theme_id);
+    }
+
+    async function readSettingsRow(includeViewMode) {
+      const { data, error } = await state.supabase
+        .from("app_settings")
+        .select(includeViewMode ? SETTINGS_SELECT_FIELDS : LEGACY_SETTINGS_SELECT_FIELDS)
+        .eq("id", APP_SETTINGS_ID)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
     }
 
     async function loadTodosForCurrentRange() {
@@ -1647,11 +1757,20 @@
       renderThemes();
       fillSettingsForm();
       renderCommonItems();
+      renderViewModeControls();
       renderWeekTitle();
       renderCalendar();
     }
 
     function renderWeekTitle() {
+      if (state.settings.view_mode === "today") {
+        const today = todayKey();
+        els.weekTitle.textContent = isMobileLayout()
+          ? `${formatFullDate(today)} (${weekdayName(today)})`
+          : `${formatFullDate(today)}（${weekdayName(today)}）`;
+        return;
+      }
+
       const end = addDaysKey(state.weekStart, 6);
       els.weekTitle.textContent = isMobileLayout()
         ? `${formatFullDate(state.weekStart)} (${weekdayName(state.weekStart)}) ~ ${formatMonthDay(end)} (${weekdayName(end)})`
@@ -1659,7 +1778,7 @@
     }
 
     function renderCalendar() {
-      const days = Array.from({ length: 7 }, (_, index) => addDaysKey(state.weekStart, index));
+      const days = getVisibleDays();
       const slots = generateSlots();
       if (!slots.length) {
         els.calendarFrame.innerHTML = '<div class="empty-state">時段設定無效，請調整每日時段。</div>';
@@ -1669,7 +1788,7 @@
       const today = todayKey();
       const currentSlot = getCurrentSlotKey();
       const grid = document.createElement("div");
-      grid.className = "schedule-grid";
+      grid.className = `schedule-grid is-${state.settings.view_mode}-view`;
       grid.setAttribute("role", "grid");
       applyDayColumnWidths(grid, days);
 
@@ -1792,6 +1911,14 @@
         : '<p class="hint">尚未設定常用項目。</p>';
     }
 
+    function renderViewModeControls() {
+      const isTodayMode = state.settings.view_mode === "today";
+      els.todayViewBtn.classList.toggle("is-active", isTodayMode);
+      els.weekViewBtn.classList.toggle("is-active", !isTodayMode);
+      els.todayViewBtn.setAttribute("aria-pressed", String(isTodayMode));
+      els.weekViewBtn.setAttribute("aria-pressed", String(!isTodayMode));
+    }
+
     function fillSettingsForm() {
       els.dayStartInput.value = trimTime(state.settings.day_start);
       els.dayEndInput.value = trimTime(state.settings.day_end);
@@ -1821,6 +1948,20 @@
       });
     }
 
+    async function changeViewMode(viewMode) {
+      if (!isValidViewMode(viewMode) || state.settings.view_mode === viewMode) return;
+      state.settings.view_mode = viewMode;
+      if (viewMode === "today") {
+        const today = todayKey();
+        state.weekStart = getMonday(today);
+        setJumpDateInputs(today);
+        await loadTodosForCurrentRange();
+      }
+      renderAll();
+      await persistSettings();
+      scheduleCurrentSlotUpdate();
+    }
+
     function toggleSettings() {
       const isHidden = els.settingsPanel.hasAttribute("hidden");
       if (isHidden) {
@@ -1839,6 +1980,7 @@
         interval_minutes: Number(els.intervalSelect.value),
         theme_id: state.settings.theme_id,
         font_size: els.fontSizeSelect.value,
+        view_mode: state.settings.view_mode,
         common_items: getCommonItems()
       });
 
@@ -1891,6 +2033,55 @@
       }
 
       setSyncStatus("saving", "雲端儲存中…");
+      const payload = toSettingsPayload(true);
+      try {
+        await writeAndVerifySettings(payload, true);
+        state.settings = normalizeSettings(payload);
+        setSyncStatus("saved", "同步雲端");
+      } catch (error) {
+        if (isMissingViewModeColumnError(error)) {
+          await persistLegacySettings();
+          return;
+        }
+        if (!isPermanentSupabaseError(error)) {
+          queueRetry(() => persistSettings());
+        }
+        reportSupabaseError(error, "設定同步失敗");
+      }
+    }
+
+    async function persistLegacySettings() {
+      const payload = toSettingsPayload(false);
+      try {
+        const currentViewMode = state.settings.view_mode;
+        const savedSettings = await writeAndVerifySettings(payload, false);
+        state.settings = normalizeSettings({ ...savedSettings, view_mode: currentViewMode });
+        setSyncStatus("saved", "同步雲端");
+        showToast("Supabase 尚未建立 view_mode 欄位，顯示模式暫時不會被記憶。");
+      } catch (error) {
+        if (!isPermanentSupabaseError(error)) {
+          queueRetry(() => persistSettings());
+        }
+        reportSupabaseError(error, "設定同步失敗");
+      }
+    }
+
+    async function writeAndVerifySettings(payload, includeViewMode) {
+      const { error } = await state.supabase
+        .from("app_settings")
+        .update(payload)
+        .eq("id", APP_SETTINGS_ID);
+      if (error) throw error;
+
+      const savedSettings = await readSettingsRow(includeViewMode);
+      if (!savedSettings) throw new Error(`app_settings id=${APP_SETTINGS_ID} 不存在，請先建立固定設定列。`);
+      if (!settingsPayloadMatches(savedSettings, payload, includeViewMode)) {
+        throw new Error("設定未寫入 Supabase，請檢查 app_settings 的 anon UPDATE policy。");
+      }
+      return savedSettings;
+    }
+
+    function toSettingsPayload(includeViewMode) {
       const payload = {
         day_start: trimTime(state.settings.day_start),
         day_end: trimTime(state.settings.day_end),
@@ -1900,32 +2091,8 @@
         common_items: getCommonItems(),
         updated_at: new Date().toISOString()
       };
-      try {
-        const { error } = await state.supabase
-          .from("app_settings")
-          .update(payload)
-          .eq("id", APP_SETTINGS_ID);
-        if (error) throw error;
-
-        const { data: savedSettings, error: readError } = await state.supabase
-          .from("app_settings")
-          .select("day_start, day_end, interval_minutes, theme_id, font_size, common_items")
-          .eq("id", APP_SETTINGS_ID)
-          .maybeSingle();
-        if (readError) throw readError;
-        if (!savedSettings) throw new Error(`app_settings id=${APP_SETTINGS_ID} 不存在，請先建立固定設定列。`);
-        if (!settingsPayloadMatches(savedSettings, payload)) {
-          throw new Error("設定未寫入 Supabase，請檢查 app_settings 的 anon UPDATE policy。");
-        }
-
-        state.settings = normalizeSettings(savedSettings);
-        setSyncStatus("saved", "同步雲端");
-      } catch (error) {
-        if (!isPermanentSupabaseError(error)) {
-          queueRetry(() => persistSettings());
-        }
-        reportSupabaseError(error, "設定同步失敗");
-      }
+      if (includeViewMode) payload.view_mode = state.settings.view_mode;
+      return payload;
     }
 
     function handleCalendarClick(event) {
@@ -2380,25 +2547,6 @@
       }
     }
 
-    function handleTouchStart(event) {
-      const touch = event.changedTouches[0];
-      state.touchStart = { x: touch.clientX, y: touch.clientY };
-    }
-
-    function handleTouchEnd(event) {
-      if (!state.touchStart) return;
-      const touch = event.changedTouches[0];
-      const dx = touch.clientX - state.touchStart.x;
-      const dy = touch.clientY - state.touchStart.y;
-      state.touchStart = null;
-      if (Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
-      if (dx > 0) {
-        shiftWeek(7);
-      } else {
-        shiftWeek(-7);
-      }
-    }
-
     function scheduleCurrentSlotUpdate() {
       window.clearTimeout(state.currentTimer);
       const now = new Date();
@@ -2453,6 +2601,13 @@
         message.includes("row-level security") ||
         message.includes("anon update policy") ||
         message.includes("設定未寫入");
+    }
+
+    function isMissingViewModeColumnError(error) {
+      const code = String(error?.code || "");
+      const message = String(error?.message || "").toLowerCase();
+      return (code === "PGRST204" || code === "42703" || message.includes("could not find") || message.includes("does not exist")) &&
+        message.includes("view_mode");
     }
 
     function setSyncStatus(stateName, text) {
@@ -2549,6 +2704,7 @@
         interval_minutes: interval,
         theme_id: isValidTheme(settings.theme_id) ? settings.theme_id : DEFAULT_SETTINGS.theme_id,
         font_size: isValidFontSize(settings.font_size) ? settings.font_size : DEFAULT_SETTINGS.font_size,
+        view_mode: isValidViewMode(settings.view_mode) ? settings.view_mode : DEFAULT_SETTINGS.view_mode,
         common_items: normalizeCommonItems(settings.common_items)
       };
     }
@@ -2557,10 +2713,16 @@
       return ["small", "medium", "large", "xlarge"].includes(size);
     }
 
-    function settingsPayloadMatches(savedSettings, payload) {
+    function isValidViewMode(viewMode) {
+      return ["today", "week"].includes(viewMode);
+    }
+
+    function settingsPayloadMatches(savedSettings, payload, includeViewMode = true) {
       const saved = normalizeSettings(savedSettings);
       const expected = normalizeSettings(payload);
-      return saved.day_start === expected.day_start &&
+      const viewModeMatches = !includeViewMode || saved.view_mode === expected.view_mode;
+      return viewModeMatches &&
+        saved.day_start === expected.day_start &&
         saved.day_end === expected.day_end &&
         saved.interval_minutes === expected.interval_minutes &&
         saved.theme_id === expected.theme_id &&
@@ -2585,6 +2747,11 @@
 
     function getCommonItems() {
       return normalizeCommonItems(state.settings.common_items);
+    }
+
+    function getVisibleDays() {
+      if (state.settings.view_mode === "today") return [todayKey()];
+      return Array.from({ length: 7 }, (_, index) => addDaysKey(state.weekStart, index));
     }
 
     function generateSlots() {
