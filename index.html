@@ -1454,7 +1454,7 @@
             .eq("id", 1)
             .maybeSingle();
           if (error) throw error;
-          settings = normalizeSettings(data || await createDefaultSettings());
+          settings = normalizeSettings(data || DEFAULT_SETTINGS);
         } catch (error) {
           reportSupabaseError(error, "讀取雲端設定失敗");
         }
@@ -1463,21 +1463,6 @@
       state.settings = settings;
       fillSettingsForm();
       applyTheme(settings.theme_id);
-    }
-
-    async function createDefaultSettings() {
-      const payload = {
-        id: 1,
-        ...DEFAULT_SETTINGS,
-        updated_at: new Date().toISOString()
-      };
-      const { data, error } = await state.supabase
-        .from("app_settings")
-        .upsert(payload, { onConflict: "id" })
-        .select("day_start, day_end, interval_minutes, theme_id, font_size, common_items")
-        .maybeSingle();
-      if (error) throw error;
-      return data || payload;
     }
 
     async function loadTodosForCurrentRange() {
@@ -1742,11 +1727,12 @@
       try {
         const { data, error } = await state.supabase
           .from("app_settings")
-          .upsert({ id: 1, ...payload }, { onConflict: "id" })
+          .update(payload)
+          .eq("id", 1)
           .select("id")
           .maybeSingle();
         if (error) throw error;
-        if (!data) throw new Error("app_settings id=1 已存在但無法由 anon 更新，請檢查 Supabase RLS 的 SELECT / INSERT / UPDATE policy。");
+        if (!data) throw new Error("app_settings id=1 不存在或 anon 無法更新，請先建立 id=1 並檢查 Supabase RLS 的 SELECT / UPDATE policy。");
         setSyncStatus("saved", "同步雲端");
       } catch (error) {
         if (!isPermanentSupabaseError(error)) {
