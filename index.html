@@ -191,6 +191,7 @@
     html,
     body {
       min-height: 100%;
+      overscroll-behavior-x: contain;
     }
 
     body {
@@ -243,7 +244,7 @@
 
     .topbar {
       display: grid;
-      grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+      grid-template-columns: minmax(180px, 1fr) minmax(300px, auto) minmax(180px, 1fr);
       gap: 16px;
       align-items: center;
     }
@@ -299,7 +300,9 @@
 
     .jump-controls,
     .top-actions,
+    .quick-nav,
     .week-nav,
+    .view-stepper,
     .day-actions {
       display: flex;
       align-items: center;
@@ -314,6 +317,10 @@
     .top-actions {
       justify-content: flex-end;
       flex-wrap: wrap;
+    }
+
+    .desktop-quick-nav {
+      display: inline-flex;
     }
 
     .mobile-quick-nav {
@@ -338,14 +345,24 @@
       line-height: 1;
     }
 
+    .symbol-button {
+      width: 36px;
+      min-height: 36px;
+      flex: 0 0 36px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
     .text-button:hover,
-    .icon-button:hover {
+    .icon-button:hover,
+    .view-step-button:hover {
       border-color: var(--accent);
       background: var(--surface-strong);
     }
 
     .text-button:active,
-    .icon-button:active {
+    .icon-button:active,
+    .view-step-button:active {
       transform: translateY(1px);
     }
 
@@ -412,7 +429,7 @@
     .main-layout {
       min-height: 0;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 314px;
+      grid-template-columns: minmax(0, 1fr);
       gap: 20px;
       align-items: start;
     }
@@ -481,6 +498,22 @@
       color: var(--text);
     }
 
+    .view-stepper {
+      flex: 0 0 auto;
+      gap: 4px;
+    }
+
+    .view-step-button {
+      width: 32px;
+      min-height: 32px;
+      padding: 0;
+      border-radius: 6px;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+    }
+
     .calendar-icon {
       width: 27px;
       height: 27px;
@@ -511,6 +544,7 @@
 
     .calendar-frame {
       overflow: auto;
+      overscroll-behavior: contain;
       border: 1px solid var(--grid);
       border-radius: var(--radius);
       background: var(--surface-soft);
@@ -595,6 +629,11 @@
       border-top: 2px solid var(--accent);
     }
 
+    .day-head.is-selected {
+      outline: 2px solid var(--accent);
+      outline-offset: -4px;
+    }
+
     .day-date {
       font-size: 17px;
       font-weight: 700;
@@ -673,6 +712,10 @@
 
     .slot-cell.is-today {
       background: var(--today);
+    }
+
+    .slot-cell.is-selected {
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent), transparent 45%);
     }
 
     .slot-cell.is-current {
@@ -894,8 +937,11 @@
     }
 
     .settings-panel {
-      position: sticky;
-      top: 20px;
+      position: fixed;
+      top: 84px;
+      right: max(24px, calc((100vw - 1600px) / 2 + 24px));
+      z-index: 35;
+      width: min(314px, calc(100vw - 48px));
       max-height: calc(100svh - 48px);
       overflow: auto;
       padding: 18px;
@@ -1137,11 +1183,12 @@
     @media (max-width: 1180px) {
       .topbar {
         grid-template-columns: 1fr;
+        justify-items: center;
       }
 
       .jump-controls,
       .top-actions {
-        justify-content: flex-start;
+        justify-content: center;
       }
 
       .main-layout {
@@ -1149,8 +1196,9 @@
       }
 
       .settings-panel {
-        position: static;
-        max-height: none;
+        top: 142px;
+        right: 24px;
+        max-height: calc(100svh - 166px);
       }
     }
 
@@ -1167,6 +1215,7 @@
 
       .brand-mark,
       .jump-controls,
+      .desktop-quick-nav,
       .top-actions .sync-status,
       .day-actions,
       .calendar-icon {
@@ -1198,10 +1247,9 @@
       }
 
       .mobile-symbol-button {
+        flex: 0 0 34px;
         width: 34px;
         min-height: 34px;
-        flex: 0 0 34px;
-        font-size: 17px;
       }
 
       .calendar-toolbar {
@@ -1212,9 +1260,11 @@
       .range-bar {
         flex: 1 1 auto;
         justify-content: center;
+        flex-wrap: wrap;
       }
 
       .week-title {
+        flex: 1 1 100%;
         justify-content: center;
         font-size: 14px;
         text-align: center;
@@ -1222,6 +1272,11 @@
 
       .view-mode-button {
         width: 34px;
+        min-height: 30px;
+      }
+
+      .view-step-button {
+        width: 30px;
         min-height: 30px;
       }
 
@@ -1258,6 +1313,7 @@
         right: 12px;
         top: 72px;
         z-index: 40;
+        width: auto;
         max-height: calc(100svh - 92px);
         overflow: auto;
         padding: 14px;
@@ -1337,18 +1393,20 @@
       </div>
 
       <div class="jump-controls" aria-label="日期跳轉">
-        <button class="icon-button" id="prevWeekBtn" type="button" title="上週" aria-label="上週">‹</button>
         <input class="date-input" id="jumpDateInput" type="date" aria-label="選擇日期">
         <button class="text-button primary-button" id="goDateBtn" type="button">前往</button>
-        <button class="text-button" id="todayBtn" type="button">今天</button>
-        <button class="icon-button" id="nextWeekBtn" type="button" title="下週" aria-label="下週">›</button>
       </div>
 
       <div class="top-actions">
-        <div class="mobile-quick-nav" aria-label="週切換">
-          <button class="icon-button mobile-symbol-button" id="mobilePrevWeekBtn" type="button" title="上週" aria-label="上週">‹</button>
-          <button class="icon-button mobile-symbol-button" id="mobileTodayBtn" type="button" title="今天" aria-label="今天">今</button>
-          <button class="icon-button mobile-symbol-button" id="mobileNextWeekBtn" type="button" title="下週" aria-label="下週">›</button>
+        <div class="quick-nav desktop-quick-nav" aria-label="週切換">
+          <button class="icon-button symbol-button" id="prevWeekBtn" type="button" title="上週" aria-label="上週">‹</button>
+          <button class="icon-button symbol-button" id="todayBtn" type="button" title="今天" aria-label="今天">今</button>
+          <button class="icon-button symbol-button" id="nextWeekBtn" type="button" title="下週" aria-label="下週">›</button>
+        </div>
+        <div class="quick-nav mobile-quick-nav" aria-label="週切換">
+          <button class="icon-button symbol-button mobile-symbol-button" id="mobilePrevWeekBtn" type="button" title="上週" aria-label="上週">‹</button>
+          <button class="icon-button symbol-button mobile-symbol-button" id="mobileTodayBtn" type="button" title="今天" aria-label="今天">今</button>
+          <button class="icon-button symbol-button mobile-symbol-button" id="mobileNextWeekBtn" type="button" title="下週" aria-label="下週">›</button>
         </div>
         <button class="text-button" id="settingsBtn" type="button" aria-expanded="false" aria-controls="settingsPanel">⚙ 設定</button>
         <div class="sync-status" id="syncStatus" data-state="saving" aria-live="polite">
@@ -1369,6 +1427,10 @@
             <div class="view-toggle" aria-label="顯示模式">
               <button class="view-mode-button" id="todayViewBtn" type="button" aria-pressed="false" title="今日">今</button>
               <button class="view-mode-button" id="weekViewBtn" type="button" aria-pressed="true" title="整週">週</button>
+            </div>
+            <div class="view-stepper" aria-label="日期切換">
+              <button class="view-step-button" id="prevDayBtn" type="button" title="上一日" aria-label="上一日">‹</button>
+              <button class="view-step-button" id="nextDayBtn" type="button" title="下一日" aria-label="下一日">›</button>
             </div>
           </div>
           <div class="day-actions">
@@ -1493,7 +1555,7 @@
     const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
     const DAY_COLUMN_MIN_WIDTH = 104;
     const DAY_COLUMN_MAX_WIDTH = 360;
-    const DAY_COLUMN_TODO_CHROME_WIDTH = 72;
+    const DAY_COLUMN_TODO_CHROME_WIDTH = 42;
     let textMeasureContext = null;
     const state = {
       instanceId: "",
@@ -1502,6 +1564,7 @@
       settings: { ...DEFAULT_SETTINGS },
       todos: [],
       weekStart: "",
+      activeDate: "",
       selectedDay: "",
       loadedRange: null,
       draggedTodoId: null,
@@ -1528,6 +1591,8 @@
       mobileTodayBtn: document.getElementById("mobileTodayBtn"),
       todayViewBtn: document.getElementById("todayViewBtn"),
       weekViewBtn: document.getElementById("weekViewBtn"),
+      prevDayBtn: document.getElementById("prevDayBtn"),
+      nextDayBtn: document.getElementById("nextDayBtn"),
       clearTodayBtn: document.getElementById("clearTodayBtn"),
       copyTodayBtn: document.getElementById("copyTodayBtn"),
       settingsBtn: document.getElementById("settingsBtn"),
@@ -1559,8 +1624,9 @@
 
     async function init() {
       state.instanceId = getInstanceId();
-      state.weekStart = getMonday(todayKey());
-      setJumpDateInputs(todayKey());
+      state.activeDate = todayKey();
+      state.weekStart = getMonday(state.activeDate);
+      setJumpDateInputs(state.activeDate);
       bindEvents();
       renderThemes();
       setSyncStatus("saving", "載入中…");
@@ -1587,6 +1653,8 @@
       els.mobileTodayBtn.addEventListener("click", () => goToDate(todayKey()));
       els.todayViewBtn.addEventListener("click", () => changeViewMode("today"));
       els.weekViewBtn.addEventListener("click", () => changeViewMode("week"));
+      els.prevDayBtn.addEventListener("click", () => shiftActiveDay(-1));
+      els.nextDayBtn.addEventListener("click", () => shiftActiveDay(1));
       els.mobileGoDateBtn.addEventListener("click", () => goToDate(els.mobileJumpDateInput.value || todayKey()));
       els.jumpDateInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
@@ -1764,10 +1832,10 @@
 
     function renderWeekTitle() {
       if (state.settings.view_mode === "today") {
-        const today = todayKey();
+        const activeDate = getActiveDate();
         els.weekTitle.textContent = isMobileLayout()
-          ? `${formatFullDate(today)} (${weekdayName(today)})`
-          : `${formatFullDate(today)}（${weekdayName(today)}）`;
+          ? `${formatFullDate(activeDate)} (${weekdayName(activeDate)})`
+          : `${formatFullDate(activeDate)}（${weekdayName(activeDate)}）`;
         return;
       }
 
@@ -1786,6 +1854,7 @@
       }
 
       const today = todayKey();
+      const activeDate = getActiveDate();
       const currentSlot = getCurrentSlotKey();
       const grid = document.createElement("div");
       grid.className = `schedule-grid is-${state.settings.view_mode}-view`;
@@ -1800,7 +1869,12 @@
       days.forEach((day) => {
         const dayHead = document.createElement("button");
         dayHead.type = "button";
-        dayHead.className = `grid-cell day-head${day === today ? " is-today" : ""}`;
+        dayHead.className = [
+          "grid-cell",
+          "day-head",
+          day === today ? "is-today" : "",
+          day === activeDate ? "is-selected" : ""
+        ].filter(Boolean).join(" ");
         dayHead.dataset.date = day;
         dayHead.innerHTML = `
           <span class="day-date">${formatColumnDate(day)}</span>
@@ -1823,6 +1897,7 @@
             "grid-cell",
             "slot-cell",
             day === today ? "is-today" : "",
+            day === activeDate ? "is-selected" : "",
             isCurrent ? "is-current" : "",
             cellTodos.length ? "has-todos" : ""
           ].filter(Boolean).join(" ");
@@ -1869,7 +1944,6 @@
       ].filter(Boolean).join(" ");
       return `
         <article class="${classes}" draggable="true" data-todo-id="${escapeAttr(todo.id)}">
-          <span class="drag-handle" title="拖曳">⋮⋮</span>
           <span class="todo-text" contenteditable="true" spellcheck="false">${escapeHtml(todo.content)}</span>
         </article>
       `;
@@ -1917,6 +1991,10 @@
       els.weekViewBtn.classList.toggle("is-active", !isTodayMode);
       els.todayViewBtn.setAttribute("aria-pressed", String(isTodayMode));
       els.weekViewBtn.setAttribute("aria-pressed", String(!isTodayMode));
+      els.prevDayBtn.setAttribute("title", isTodayMode ? "上一日" : "選取上一日");
+      els.nextDayBtn.setAttribute("title", isTodayMode ? "下一日" : "選取下一日");
+      els.prevDayBtn.setAttribute("aria-label", isTodayMode ? "上一日" : "選取上一日");
+      els.nextDayBtn.setAttribute("aria-label", isTodayMode ? "下一日" : "選取下一日");
     }
 
     function fillSettingsForm() {
@@ -1928,38 +2006,71 @@
     }
 
     async function shiftWeek(days) {
-      state.weekStart = addDaysKey(state.weekStart, days);
-      setJumpDateInputs(state.weekStart);
+      state.activeDate = addDaysKey(getActiveDate(), days);
+      state.weekStart = getMonday(state.activeDate);
+      setJumpDateInputs(state.activeDate);
       await loadTodosForCurrentRange();
       renderAll();
       scheduleCurrentSlotUpdate();
+      scrollToActiveDate();
     }
 
     async function goToDate(dateKeyValue) {
       if (!dateKeyValue) return;
+      state.activeDate = dateKeyValue;
       state.weekStart = getMonday(dateKeyValue);
       setJumpDateInputs(dateKeyValue);
       await loadTodosForCurrentRange();
       renderAll();
       scheduleCurrentSlotUpdate();
-      requestAnimationFrame(() => {
-        const head = els.calendarFrame.querySelector(`.day-head[data-date="${dateKeyValue}"]`);
-        if (head) head.scrollIntoView({ inline: "center", block: "nearest" });
-      });
+      scrollToActiveDate();
     }
 
     async function changeViewMode(viewMode) {
       if (!isValidViewMode(viewMode) || state.settings.view_mode === viewMode) return;
       state.settings.view_mode = viewMode;
       if (viewMode === "today") {
-        const today = todayKey();
-        state.weekStart = getMonday(today);
-        setJumpDateInputs(today);
+        state.weekStart = getMonday(getActiveDate());
+        setJumpDateInputs(getActiveDate());
         await loadTodosForCurrentRange();
       }
       renderAll();
       await persistSettings();
       scheduleCurrentSlotUpdate();
+      scrollToActiveDate();
+    }
+
+    async function shiftActiveDay(days) {
+      const nextDate = addDaysKey(getActiveDate(), days);
+      const nextWeekStart = getMonday(nextDate);
+      const shouldReload = nextWeekStart !== state.weekStart || !isDateLoaded(nextDate);
+      state.activeDate = nextDate;
+      state.weekStart = nextWeekStart;
+      setJumpDateInputs(nextDate);
+      if (shouldReload) await loadTodosForCurrentRange();
+      renderAll();
+      scheduleCurrentSlotUpdate();
+      scrollToActiveDate();
+    }
+
+    function getActiveDate() {
+      return isDateKey(state.activeDate) ? state.activeDate : todayKey();
+    }
+
+    function isDateKey(value) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
+    }
+
+    function isDateLoaded(dateKeyValue) {
+      return Boolean(state.loadedRange && dateKeyValue >= state.loadedRange.start && dateKeyValue <= state.loadedRange.end);
+    }
+
+    function scrollToActiveDate() {
+      if (state.settings.view_mode === "today") return;
+      requestAnimationFrame(() => {
+        const head = els.calendarFrame.querySelector(`.day-head[data-date="${getActiveDate()}"]`);
+        if (head) head.scrollIntoView({ inline: "center", block: "nearest" });
+      });
     }
 
     function toggleSettings() {
@@ -2098,6 +2209,7 @@
     function handleCalendarClick(event) {
       const dayHead = event.target.closest(".day-head");
       if (dayHead) {
+        state.activeDate = dayHead.dataset.date;
         openDayMenu(dayHead.dataset.date, dayHead);
         return;
       }
@@ -2750,7 +2862,7 @@
     }
 
     function getVisibleDays() {
-      if (state.settings.view_mode === "today") return [todayKey()];
+      if (state.settings.view_mode === "today") return [getActiveDate()];
       return Array.from({ length: 7 }, (_, index) => addDaysKey(state.weekStart, index));
     }
 
