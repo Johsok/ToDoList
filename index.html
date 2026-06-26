@@ -1474,8 +1474,7 @@
           if (error) throw error;
           if (data) settings = normalizeSettings(data);
         } catch (error) {
-          showToast("讀取雲端設定失敗，已使用預設值。");
-          console.warn(error);
+          reportSupabaseError(error, "讀取雲端設定失敗");
         }
       }
 
@@ -1751,9 +1750,10 @@
         if (error) throw error;
         setSyncStatus("saved", "同步雲端");
       } catch (error) {
-        queueRetry(() => persistSettings());
-        setSyncStatus("error", "無法同步，將自動重試");
-        console.warn(error);
+        if (!isPermanentSupabaseError(error)) {
+          queueRetry(() => persistSettings());
+        }
+        reportSupabaseError(error, "設定同步失敗");
       }
     }
 
@@ -2275,6 +2275,24 @@
       setSyncStatus("error", "雲端未連線");
       showToast("目前無法連線 Supabase，資料不會存到本機暫存。");
       return false;
+    }
+
+    function reportSupabaseError(error, fallbackMessage) {
+      const message = error?.message || fallbackMessage;
+      setSyncStatus("error", fallbackMessage);
+      showToast(`${fallbackMessage}：${message}`);
+      console.warn(error);
+    }
+
+    function isPermanentSupabaseError(error) {
+      const code = String(error?.code || "");
+      const message = String(error?.message || "").toLowerCase();
+      return code === "PGRST204" ||
+        code === "42703" ||
+        code === "42501" ||
+        message.includes("could not find") ||
+        message.includes("permission denied") ||
+        message.includes("row-level security");
     }
 
     function setSyncStatus(stateName, text) {
