@@ -1,0 +1,2540 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f2027">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="週待辦清單">
+  <title>週待辦清單</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      --surface: rgba(255, 255, 255, 0.08);
+      --surface-strong: rgba(255, 255, 255, 0.13);
+      --surface-soft: rgba(255, 255, 255, 0.04);
+      --grid: rgba(255, 255, 255, 0.17);
+      --grid-soft: rgba(255, 255, 255, 0.09);
+      --text: #f7fbff;
+      --muted: #aebfca;
+      --accent: #4facfe;
+      --accent-strong: #2f9dff;
+      --today: rgba(79, 172, 254, 0.12);
+      --now: rgba(255, 183, 77, 0.25);
+      --now-line: #ffb74d;
+      --important: #ff6b6b;
+      --important-bg: rgba(255, 107, 107, 0.15);
+      --done: 0.55;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.26);
+      --radius: 8px;
+      --time-col: 72px;
+      --day-col: minmax(max-content, 1fr);
+      --slot-height: 48px;
+      --todo-font-size: 15px;
+      --focus: 0 0 0 3px rgba(79, 172, 254, 0.28);
+      font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body[data-theme="midnight"] {
+      --bg: linear-gradient(135deg, #08111f, #10233f, #0f3650);
+      --surface: rgba(140, 178, 220, 0.08);
+      --surface-strong: rgba(140, 178, 220, 0.14);
+      --surface-soft: rgba(140, 178, 220, 0.04);
+      --grid: rgba(173, 198, 230, 0.18);
+      --grid-soft: rgba(173, 198, 230, 0.09);
+      --text: #eef6ff;
+      --muted: #9db2cc;
+      --accent: #80aaff;
+      --accent-strong: #aac4ff;
+      --today: rgba(128, 170, 255, 0.14);
+    }
+
+    body[data-theme="forest"] {
+      --bg: linear-gradient(135deg, #082317, #123928, #1c5a48);
+      --surface: rgba(221, 255, 239, 0.08);
+      --surface-strong: rgba(221, 255, 239, 0.14);
+      --surface-soft: rgba(221, 255, 239, 0.04);
+      --grid: rgba(208, 255, 232, 0.18);
+      --grid-soft: rgba(208, 255, 232, 0.09);
+      --text: #f2fff8;
+      --muted: #b4d1c3;
+      --accent: #61d394;
+      --accent-strong: #8ef0b5;
+      --today: rgba(97, 211, 148, 0.15);
+    }
+
+    body[data-theme="sunrise"] {
+      color-scheme: light;
+      --bg: linear-gradient(135deg, #fff3d6, #ffe0c2, #f7b98c);
+      --surface: rgba(255, 255, 255, 0.66);
+      --surface-strong: rgba(255, 255, 255, 0.9);
+      --surface-soft: rgba(255, 255, 255, 0.46);
+      --grid: rgba(110, 78, 64, 0.25);
+      --grid-soft: rgba(110, 78, 64, 0.13);
+      --text: #2e211b;
+      --muted: #745e52;
+      --accent: #d06435;
+      --accent-strong: #a94721;
+      --today: rgba(208, 100, 53, 0.12);
+      --shadow: 0 18px 50px rgba(124, 66, 34, 0.18);
+    }
+
+    body[data-theme="minimal"] {
+      color-scheme: light;
+      --bg: linear-gradient(135deg, #f8fafc, #edf2f7, #e2e8f0);
+      --surface: rgba(255, 255, 255, 0.75);
+      --surface-strong: rgba(255, 255, 255, 0.96);
+      --surface-soft: rgba(255, 255, 255, 0.55);
+      --grid: rgba(30, 41, 59, 0.18);
+      --grid-soft: rgba(30, 41, 59, 0.1);
+      --text: #111827;
+      --muted: #5b6472;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --today: rgba(37, 99, 235, 0.09);
+      --shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+    }
+
+    body[data-theme="classic_blue"] {
+      color-scheme: light;
+      --bg: linear-gradient(135deg, #e7f0ff, #f7fbff, #dbeafe);
+      --surface: rgba(255, 255, 255, 0.76);
+      --surface-strong: rgba(255, 255, 255, 0.96);
+      --surface-soft: rgba(255, 255, 255, 0.56);
+      --grid: rgba(22, 78, 155, 0.22);
+      --grid-soft: rgba(22, 78, 155, 0.12);
+      --text: #10243e;
+      --muted: #506882;
+      --accent: #1d6fd6;
+      --accent-strong: #0f55b1;
+      --today: rgba(29, 111, 214, 0.11);
+      --shadow: 0 18px 50px rgba(28, 72, 124, 0.14);
+    }
+
+    body[data-theme="nord"] {
+      --bg: linear-gradient(135deg, #2e3440, #3b4252, #4c566a);
+      --surface: rgba(216, 222, 233, 0.08);
+      --surface-strong: rgba(216, 222, 233, 0.14);
+      --surface-soft: rgba(216, 222, 233, 0.04);
+      --grid: rgba(216, 222, 233, 0.18);
+      --grid-soft: rgba(216, 222, 233, 0.09);
+      --text: #eceff4;
+      --muted: #b9c2d1;
+      --accent: #88c0d0;
+      --accent-strong: #8fbcbb;
+      --today: rgba(136, 192, 208, 0.14);
+    }
+
+    body[data-theme="dracula"] {
+      --bg: linear-gradient(135deg, #1f1d2e, #282a36, #3b2a52);
+      --surface: rgba(248, 248, 242, 0.08);
+      --surface-strong: rgba(248, 248, 242, 0.14);
+      --surface-soft: rgba(248, 248, 242, 0.04);
+      --grid: rgba(248, 248, 242, 0.18);
+      --grid-soft: rgba(248, 248, 242, 0.09);
+      --text: #f8f8f2;
+      --muted: #c7bddb;
+      --accent: #bd93f9;
+      --accent-strong: #8be9fd;
+      --today: rgba(189, 147, 249, 0.14);
+      --important: #ff79c6;
+      --important-bg: rgba(255, 121, 198, 0.16);
+    }
+
+    body[data-theme="solarized"] {
+      color-scheme: light;
+      --bg: linear-gradient(135deg, #fdf6e3, #eee8d5, #d8d2b8);
+      --surface: rgba(253, 246, 227, 0.74);
+      --surface-strong: rgba(253, 246, 227, 0.94);
+      --surface-soft: rgba(253, 246, 227, 0.54);
+      --grid: rgba(101, 123, 131, 0.23);
+      --grid-soft: rgba(101, 123, 131, 0.12);
+      --text: #073642;
+      --muted: #657b83;
+      --accent: #268bd2;
+      --accent-strong: #2aa198;
+      --today: rgba(38, 139, 210, 0.11);
+      --shadow: 0 18px 50px rgba(88, 72, 35, 0.14);
+    }
+
+    body[data-theme="high_contrast"] {
+      --bg: #050505;
+      --surface: rgba(255, 255, 255, 0.1);
+      --surface-strong: rgba(255, 255, 255, 0.18);
+      --surface-soft: rgba(255, 255, 255, 0.05);
+      --grid: rgba(255, 255, 255, 0.38);
+      --grid-soft: rgba(255, 255, 255, 0.22);
+      --text: #ffffff;
+      --muted: #d8d8d8;
+      --accent: #00e5ff;
+      --accent-strong: #fff200;
+      --today: rgba(0, 229, 255, 0.16);
+      --now: rgba(255, 242, 0, 0.22);
+      --now-line: #fff200;
+      --important: #ff3b30;
+      --important-bg: rgba(255, 59, 48, 0.23);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      color: var(--text);
+      background: var(--bg);
+      letter-spacing: 0;
+      transition: background 180ms ease, color 180ms ease;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    button,
+    .date-input,
+    .select-control,
+    .time-control {
+      min-height: 44px;
+      border: 1px solid var(--grid);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    [contenteditable="true"]:focus-visible {
+      box-shadow: var(--focus);
+    }
+
+    .app-shell {
+      width: min(1600px, 100%);
+      min-height: 100svh;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 18px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+      gap: 16px;
+      align-items: center;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border: 2px solid var(--text);
+      border-radius: 7px;
+      position: relative;
+      flex: 0 0 auto;
+    }
+
+    .brand-mark::before {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 8px;
+      border: 2px solid var(--text);
+      border-bottom: 0;
+      border-radius: 6px 6px 0 0;
+      left: 11px;
+      top: -8px;
+      background: transparent;
+    }
+
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 10px;
+      border-left: 3px solid var(--text);
+      border-bottom: 3px solid var(--text);
+      transform: rotate(-45deg);
+      left: 10px;
+      top: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.2;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .jump-controls,
+    .top-actions,
+    .week-nav,
+    .day-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .jump-controls {
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .top-actions {
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .icon-button,
+    .text-button {
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    .icon-button {
+      width: 48px;
+      padding: 0;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .text-button:hover,
+    .icon-button:hover {
+      border-color: var(--accent);
+      background: var(--surface-strong);
+    }
+
+    .text-button:active,
+    .icon-button:active {
+      transform: translateY(1px);
+    }
+
+    .date-input,
+    .select-control,
+    .time-control {
+      padding: 0 12px;
+      accent-color: var(--accent);
+    }
+
+    select,
+    select option {
+      color: var(--text);
+      background: #111827;
+    }
+
+    .date-input {
+      min-width: 162px;
+    }
+
+    .sync-status {
+      min-width: 118px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 14px;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--grid);
+      border-radius: var(--radius);
+      min-height: 44px;
+      font-size: 14px;
+    }
+
+    .sync-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #28d17c;
+      box-shadow: 0 0 14px rgba(40, 209, 124, 0.68);
+    }
+
+    .sync-status[data-state="saving"] .sync-dot {
+      background: #ffb74d;
+      box-shadow: 0 0 14px rgba(255, 183, 77, 0.68);
+      animation: pulse 900ms infinite alternate;
+    }
+
+    .sync-status[data-state="error"] .sync-dot {
+      background: var(--important);
+      box-shadow: 0 0 14px rgba(255, 107, 107, 0.68);
+    }
+
+    .sync-status[data-state="local"] .sync-dot {
+      background: var(--muted);
+      box-shadow: none;
+    }
+
+    @keyframes pulse {
+      from {
+        opacity: 0.45;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    .main-layout {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 314px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .calendar-area {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .calendar-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .week-title {
+      margin: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      font-size: 22px;
+      line-height: 1.25;
+    }
+
+    .calendar-icon {
+      width: 27px;
+      height: 27px;
+      border: 2px solid currentColor;
+      border-radius: 5px;
+      position: relative;
+      flex: 0 0 auto;
+    }
+
+    .calendar-icon::before,
+    .calendar-icon::after {
+      content: "";
+      position: absolute;
+      top: -6px;
+      width: 3px;
+      height: 9px;
+      background: currentColor;
+      border-radius: 2px;
+    }
+
+    .calendar-icon::before {
+      left: 6px;
+    }
+
+    .calendar-icon::after {
+      right: 6px;
+    }
+
+    .calendar-frame {
+      overflow: auto;
+      border: 1px solid var(--grid);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      box-shadow: var(--shadow);
+      max-height: calc(100svh - 174px);
+      min-height: 480px;
+      scrollbar-color: var(--accent) transparent;
+    }
+
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: var(--time-col) repeat(7, var(--day-col));
+      align-items: stretch;
+    }
+
+    .grid-cell {
+      min-width: 0;
+      border-right: 1px solid var(--grid);
+      border-bottom: 1px solid var(--grid-soft);
+    }
+
+    .grid-cell:nth-child(8n) {
+      border-right: 0;
+    }
+
+    .time-head,
+    .day-head {
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      min-height: 54px;
+      background: color-mix(in srgb, var(--surface-strong), transparent 8%);
+      backdrop-filter: blur(20px);
+    }
+
+    .time-head {
+      left: 0;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .day-head {
+      padding: 8px 10px;
+      display: grid;
+      place-items: center;
+      gap: 2px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 120ms ease, color 120ms ease;
+    }
+
+    .day-head:hover {
+      background: var(--surface-strong);
+    }
+
+    .day-head.is-today {
+      background: var(--today);
+      color: var(--accent);
+      border-top: 2px solid var(--accent);
+    }
+
+    .day-date {
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .day-meta {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .time-cell {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      min-height: var(--slot-height);
+      padding: 8px 10px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      background: color-mix(in srgb, var(--surface-strong), transparent 15%);
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      font-size: 15px;
+    }
+
+    .time-cell.is-current {
+      color: var(--now-line);
+      background: color-mix(in srgb, var(--now), var(--surface-strong) 60%);
+      border-top: 1px solid var(--now-line);
+      border-bottom: 1px solid var(--now-line);
+    }
+
+    .time-cell.is-current::before {
+      content: "";
+      width: 0;
+      height: 0;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 8px solid var(--now-line);
+      margin-top: 4px;
+      margin-right: 8px;
+    }
+
+    .slot-cell {
+      min-height: var(--slot-height);
+      padding: 5px 7px;
+      background: rgba(255, 255, 255, 0.03);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+      gap: 5px;
+      transition: background 120ms ease, outline-color 120ms ease;
+    }
+
+    .slot-cell.has-todos {
+      align-items: center;
+    }
+
+    .slot-cell.is-today {
+      background: var(--today);
+    }
+
+    .slot-cell.is-current {
+      z-index: 2;
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--now-line), transparent 62%), var(--now)),
+        var(--now);
+      color: #fff8e1;
+      outline: 2px solid var(--now-line);
+      outline-offset: -2px;
+      box-shadow: inset 0 0 0 1px rgba(255, 248, 225, 0.24), 0 0 22px rgba(255, 183, 77, 0.25);
+    }
+
+    .slot-cell.is-drop-target {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+      background: color-mix(in srgb, var(--accent), transparent 84%);
+    }
+
+    .todo-item {
+      width: fit-content;
+      max-width: 100%;
+      min-height: 36px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid var(--grid);
+      border-left: 3px solid var(--accent);
+      border-radius: 7px;
+      padding: 5px 7px;
+      color: var(--text);
+      background: var(--surface);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      cursor: grab;
+      white-space: nowrap;
+      font-size: var(--todo-font-size);
+    }
+
+    .todo-item:active {
+      cursor: grabbing;
+    }
+
+    .todo-item.is-important {
+      border-color: color-mix(in srgb, var(--important), var(--grid) 35%);
+      border-left-color: var(--important);
+      background: var(--important-bg);
+    }
+
+    .todo-item.is-done {
+      opacity: var(--done);
+    }
+
+    .todo-item.is-done .todo-text {
+      text-decoration: line-through;
+    }
+
+    .todo-item.is-drag-over {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .drag-handle {
+      color: var(--muted);
+      text-align: center;
+      cursor: grab;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .todo-check {
+      width: 24px;
+      height: 24px;
+      min-height: 24px;
+      padding: 0;
+      border-radius: 6px;
+      color: var(--text);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .todo-check[aria-pressed="true"] {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .todo-text {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 3px 2px;
+      border-radius: 5px;
+      line-height: 1.35;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    .todo-text:focus {
+      overflow: visible;
+      text-overflow: clip;
+    }
+
+    .todo-text:empty::before {
+      content: "未命名";
+      color: var(--muted);
+    }
+
+    .mini-button {
+      width: 28px;
+      min-height: 28px;
+      padding: 0;
+      border-radius: 6px;
+      background: transparent;
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .mini-button:hover {
+      color: var(--text);
+      border-color: var(--accent);
+      background: var(--surface);
+    }
+
+    .todo-actions {
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      top: calc(100% + 5px);
+      z-index: 12;
+      display: none;
+      align-items: center;
+      gap: 5px;
+      padding: 5px;
+      border: 1px solid var(--grid);
+      border-radius: 7px;
+      background: color-mix(in srgb, var(--surface-strong), #000 20%);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .todo-item.is-open .todo-actions,
+    .todo-item:focus-within .todo-actions {
+      display: flex;
+    }
+
+    .todo-action-select {
+      flex: 1 1 auto;
+      min-width: 76px;
+      max-width: 132px;
+      min-height: 30px;
+      padding: 0 6px;
+      border: 1px solid var(--grid);
+      border-radius: 6px;
+      color: var(--text);
+      background: #111827;
+    }
+
+    .todo-action-button {
+      width: auto;
+      min-width: 42px;
+      padding: 0 7px;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .quick-add {
+      min-height: 32px;
+      width: 100%;
+      align-self: stretch;
+      padding: 0 8px;
+      justify-content: flex-start;
+      color: var(--muted);
+      background: transparent;
+      border: 1px dashed transparent;
+      cursor: text;
+    }
+
+    .quick-add:hover {
+      border-color: var(--grid);
+      color: var(--text);
+      background: var(--surface-soft);
+    }
+
+    .add-row {
+      display: grid;
+      width: 100%;
+      align-self: stretch;
+      grid-template-columns: minmax(0, 1fr) minmax(78px, auto) 34px 34px;
+      gap: 5px;
+      margin-top: 2px;
+    }
+
+    .add-input {
+      min-width: 0;
+      min-height: 36px;
+      border: 1px solid var(--accent);
+      border-radius: 7px;
+      padding: 0 8px;
+      color: var(--text);
+      background: var(--surface-strong);
+      outline: none;
+    }
+
+    .add-common-select {
+      min-width: 78px;
+      min-height: 36px;
+      border: 1px solid var(--grid);
+      border-radius: 7px;
+      color: var(--text);
+      background: #111827;
+    }
+
+    .settings-panel {
+      position: sticky;
+      top: 20px;
+      max-height: calc(100svh - 48px);
+      overflow: auto;
+      padding: 18px;
+      border: 1px solid var(--grid);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+    }
+
+    .settings-panel[hidden] {
+      display: none;
+    }
+
+    .panel-section + .panel-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--grid-soft);
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 19px;
+      line-height: 1.2;
+    }
+
+    .theme-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .theme-option {
+      width: 100%;
+      min-height: 64px;
+      padding: 8px 10px;
+      display: grid;
+      grid-template-columns: 66px minmax(0, 1fr) 24px;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .theme-option.is-selected {
+      border-color: var(--accent);
+      box-shadow: var(--focus);
+    }
+
+    .theme-swatch {
+      height: 44px;
+      border-radius: 7px;
+      border: 1px solid var(--grid);
+    }
+
+    .theme-name {
+      font-weight: 700;
+    }
+
+    .theme-check {
+      width: 20px;
+      height: 20px;
+      border: 1px solid var(--grid);
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      color: var(--accent);
+      font-size: 14px;
+    }
+
+    .theme-option.is-selected .theme-check::before {
+      content: "✓";
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .field-row label {
+      color: var(--muted);
+    }
+
+    .hint {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .common-builder {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    .common-list {
+      display: grid;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .common-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 8px;
+      border: 1px solid var(--grid);
+      border-radius: 7px;
+      background: var(--surface-soft);
+    }
+
+    .common-item span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .primary-button {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent), transparent 76%);
+      color: var(--text);
+    }
+
+    .danger-button {
+      border-color: color-mix(in srgb, var(--important), var(--grid) 30%);
+      background: var(--important-bg);
+    }
+
+    .toast-stack {
+      position: fixed;
+      right: max(20px, env(safe-area-inset-right));
+      bottom: max(20px, env(safe-area-inset-bottom));
+      z-index: 40;
+      display: grid;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      max-width: min(360px, calc(100vw - 40px));
+      padding: 12px 14px;
+      border: 1px solid var(--grid);
+      border-radius: var(--radius);
+      color: var(--text);
+      background: color-mix(in srgb, var(--surface-strong), #000 20%);
+      box-shadow: var(--shadow);
+      animation: toast-in 160ms ease;
+    }
+
+    @keyframes toast-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .action-sheet {
+      position: fixed;
+      z-index: 30;
+      width: min(360px, calc(100vw - 24px));
+      padding: 14px;
+      border: 1px solid var(--grid);
+      border-radius: var(--radius);
+      color: var(--text);
+      background: color-mix(in srgb, var(--surface-strong), #000 15%);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+    }
+
+    .action-sheet[hidden] {
+      display: none;
+    }
+
+    .sheet-title {
+      margin: 0 0 12px;
+      font-weight: 700;
+    }
+
+    .sheet-actions {
+      display: grid;
+      gap: 8px;
+    }
+
+    .copy-target {
+      display: none;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .copy-target.is-open {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .scrim {
+      position: fixed;
+      inset: 0;
+      z-index: 25;
+      background: rgba(0, 0, 0, 0.28);
+    }
+
+    .scrim[hidden] {
+      display: none;
+    }
+
+    .loading-state,
+    .empty-state {
+      padding: 28px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 1180px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .jump-controls,
+      .top-actions {
+        justify-content: flex-start;
+      }
+
+      .main-layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .settings-panel {
+        position: static;
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .app-shell {
+        padding: 14px;
+        gap: 14px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+      }
+
+      .jump-controls,
+      .top-actions,
+      .calendar-toolbar,
+      .week-nav,
+      .day-actions {
+        width: 100%;
+      }
+
+      .calendar-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .week-title {
+        font-size: 19px;
+      }
+
+      .day-actions,
+      .week-nav {
+        justify-content: space-between;
+      }
+
+      .date-input {
+        min-width: 0;
+        flex: 1 1 180px;
+      }
+
+      .text-button {
+        flex: 1 1 auto;
+      }
+
+      .calendar-frame {
+        max-height: calc(100svh - 264px);
+        min-height: 420px;
+      }
+
+      .schedule-grid {
+        --time-col: 66px;
+        --day-col: minmax(max-content, 1fr);
+        --slot-height: 54px;
+      }
+
+      .settings-panel {
+        padding: 14px;
+      }
+
+      .action-sheet {
+        left: 12px !important;
+        right: 12px;
+        bottom: max(12px, env(safe-area-inset-bottom));
+        top: auto !important;
+        width: auto;
+      }
+
+      .copy-target.is-open {
+        grid-template-columns: 1fr;
+      }
+
+      .toast-stack {
+        left: 14px;
+        right: 14px;
+      }
+    }
+  </style>
+</head>
+<body data-theme="dark">
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand" aria-label="週待辦清單">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <h1>週待辦清單</h1>
+      </div>
+
+      <div class="jump-controls" aria-label="日期跳轉">
+        <button class="icon-button" id="prevWeekBtn" type="button" title="上週" aria-label="上週">‹</button>
+        <input class="date-input" id="jumpDateInput" type="date" aria-label="選擇日期">
+        <button class="text-button primary-button" id="goDateBtn" type="button">前往</button>
+        <button class="text-button" id="todayBtn" type="button">今天</button>
+        <button class="icon-button" id="nextWeekBtn" type="button" title="下週" aria-label="下週">›</button>
+      </div>
+
+      <div class="top-actions">
+        <button class="text-button" id="settingsBtn" type="button" aria-expanded="false" aria-controls="settingsPanel">⚙ 設定</button>
+        <div class="sync-status" id="syncStatus" data-state="saving" aria-live="polite">
+          <span id="syncText">載入中…</span>
+          <span class="sync-dot" aria-hidden="true"></span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-layout">
+      <section class="calendar-area" aria-label="週間時段待辦">
+        <div class="calendar-toolbar">
+          <h2 class="week-title">
+            <span class="calendar-icon" aria-hidden="true"></span>
+            <span id="weekTitle">載入中…</span>
+          </h2>
+          <div class="day-actions">
+            <button class="text-button danger-button" id="clearTodayBtn" type="button">清除本日</button>
+            <button class="text-button" id="copyTodayBtn" type="button">複製本日</button>
+          </div>
+        </div>
+
+        <div class="calendar-frame" id="calendarFrame">
+          <div class="loading-state">載入中…</div>
+        </div>
+      </section>
+
+      <aside class="settings-panel" id="settingsPanel" hidden>
+        <section class="panel-section">
+          <h2 class="section-title">外觀 Theme</h2>
+          <select class="select-control" id="themeSelect" aria-label="外觀 Theme"></select>
+        </section>
+
+        <section class="panel-section">
+          <h2 class="section-title">每日時段</h2>
+          <div class="form-grid">
+            <div class="field-row">
+              <label for="dayStartInput">起始時間</label>
+              <input class="time-control" id="dayStartInput" type="time" step="600">
+            </div>
+            <div class="field-row">
+              <label for="dayEndInput">結束時間</label>
+              <input class="time-control" id="dayEndInput" type="time" step="600">
+            </div>
+            <div class="field-row">
+              <label for="intervalSelect">間隔時間</label>
+              <select class="select-control" id="intervalSelect">
+                <option value="10">10 分鐘</option>
+                <option value="15">15 分鐘</option>
+                <option value="30">30 分鐘</option>
+                <option value="60">60 分鐘</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <label for="fontSizeSelect">文字大小</label>
+              <select class="select-control" id="fontSizeSelect">
+                <option value="small">小</option>
+                <option value="medium">中</option>
+                <option value="large">大</option>
+                <option value="xlarge">特大</option>
+              </select>
+            </div>
+            <button class="text-button primary-button" id="saveSettingsBtn" type="button">儲存設定</button>
+          </div>
+          <p class="hint">設定會同步到 Supabase；尚未填入金鑰時會先保存在本機。</p>
+        </section>
+
+        <section class="panel-section">
+          <h2 class="section-title">常用設定</h2>
+          <div class="common-builder">
+            <input class="time-control" id="commonItemInput" type="text" placeholder="輸入常用項目">
+            <button class="text-button primary-button" id="addCommonItemBtn" type="button">新增</button>
+          </div>
+          <div class="common-list" id="commonItemsList"></div>
+          <p class="hint">常用項目會存入 Supabase，之後可從每個待辦項目的「常用」下拉選單套用。</p>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <div class="scrim" id="scrim" hidden></div>
+  <div class="action-sheet" id="dayMenu" hidden>
+    <p class="sheet-title" id="dayMenuTitle"></p>
+    <div class="sheet-actions">
+      <button class="text-button danger-button" id="clearDayBtn" type="button">清除當日行程</button>
+      <button class="text-button" id="openCopyDayBtn" type="button">複製到其他日期</button>
+      <div class="copy-target" id="copyTargetBox">
+        <input class="date-input" id="copyTargetInput" type="date" aria-label="複製目標日期">
+        <button class="text-button primary-button" id="confirmCopyBtn" type="button">複製</button>
+      </div>
+      <button class="text-button" id="closeDayMenuBtn" type="button">取消</button>
+    </div>
+  </div>
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+  <script>
+    const SUPABASE_URL = "https://doicpmczzvharnszpbsr.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_c46aC5fxRALpXswtxy8aIA_E-LHxIu9";
+
+    const DEFAULT_SETTINGS = {
+      day_start: "06:00",
+      day_end: "22:00",
+      interval_minutes: 30,
+      theme_id: "dark",
+      font_size: "medium",
+      common_items: []
+    };
+
+    const THEMES = [
+      { id: "dark", name: "深色模式", swatch: "linear-gradient(135deg, #0f2027, #203a43, #2c5364)" },
+      { id: "midnight", name: "午夜藍", swatch: "linear-gradient(135deg, #08111f, #10233f, #0f3650)" },
+      { id: "forest", name: "森林綠", swatch: "linear-gradient(135deg, #082317, #123928, #1c5a48)" },
+      { id: "sunrise", name: "日出暖色", swatch: "linear-gradient(135deg, #fff3d6, #f7b98c)" },
+      { id: "minimal", name: "極簡灰白", swatch: "linear-gradient(135deg, #f8fafc, #e2e8f0)" },
+      { id: "classic_blue", name: "經典藍白", swatch: "linear-gradient(135deg, #e7f0ff, #1d6fd6)" },
+      { id: "nord", name: "Nord 冷灰", swatch: "linear-gradient(135deg, #2e3440, #88c0d0)" },
+      { id: "dracula", name: "Dracula 紫黑", swatch: "linear-gradient(135deg, #282a36, #bd93f9)" },
+      { id: "solarized", name: "Solarized", swatch: "linear-gradient(135deg, #fdf6e3, #268bd2)" },
+      { id: "high_contrast", name: "高對比", swatch: "linear-gradient(135deg, #050505, #00e5ff, #fff200)" }
+    ];
+
+    const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+    const state = {
+      instanceId: "",
+      supabase: null,
+      syncMode: "local",
+      settings: { ...DEFAULT_SETTINGS },
+      todos: [],
+      weekStart: "",
+      selectedDay: "",
+      loadedRange: null,
+      draggedTodoId: null,
+      dirtyTimers: new Map(),
+      dirtyMaxTimers: new Map(),
+      retryQueue: [],
+      retryTimer: null,
+      currentTimer: null,
+      touchStart: null
+    };
+
+    const els = {
+      body: document.body,
+      calendarFrame: document.getElementById("calendarFrame"),
+      weekTitle: document.getElementById("weekTitle"),
+      jumpDateInput: document.getElementById("jumpDateInput"),
+      goDateBtn: document.getElementById("goDateBtn"),
+      prevWeekBtn: document.getElementById("prevWeekBtn"),
+      nextWeekBtn: document.getElementById("nextWeekBtn"),
+      todayBtn: document.getElementById("todayBtn"),
+      clearTodayBtn: document.getElementById("clearTodayBtn"),
+      copyTodayBtn: document.getElementById("copyTodayBtn"),
+      settingsBtn: document.getElementById("settingsBtn"),
+      settingsPanel: document.getElementById("settingsPanel"),
+      syncStatus: document.getElementById("syncStatus"),
+      syncText: document.getElementById("syncText"),
+      themeSelect: document.getElementById("themeSelect"),
+      dayStartInput: document.getElementById("dayStartInput"),
+      dayEndInput: document.getElementById("dayEndInput"),
+      intervalSelect: document.getElementById("intervalSelect"),
+      fontSizeSelect: document.getElementById("fontSizeSelect"),
+      saveSettingsBtn: document.getElementById("saveSettingsBtn"),
+      commonItemInput: document.getElementById("commonItemInput"),
+      addCommonItemBtn: document.getElementById("addCommonItemBtn"),
+      commonItemsList: document.getElementById("commonItemsList"),
+      scrim: document.getElementById("scrim"),
+      dayMenu: document.getElementById("dayMenu"),
+      dayMenuTitle: document.getElementById("dayMenuTitle"),
+      clearDayBtn: document.getElementById("clearDayBtn"),
+      openCopyDayBtn: document.getElementById("openCopyDayBtn"),
+      copyTargetBox: document.getElementById("copyTargetBox"),
+      copyTargetInput: document.getElementById("copyTargetInput"),
+      confirmCopyBtn: document.getElementById("confirmCopyBtn"),
+      closeDayMenuBtn: document.getElementById("closeDayMenuBtn"),
+      toastStack: document.getElementById("toastStack")
+    };
+
+    document.addEventListener("DOMContentLoaded", init);
+
+    async function init() {
+      state.instanceId = getInstanceId();
+      state.weekStart = getMonday(todayKey());
+      els.jumpDateInput.value = todayKey();
+      bindEvents();
+      renderThemes();
+      applyStoredTheme();
+      setSyncStatus("saving", "載入中…");
+
+      state.supabase = await createSupabaseClient();
+      state.syncMode = state.supabase ? "cloud" : "local";
+      if (!state.supabase) {
+        setSyncStatus("local", "本機暫存");
+      }
+
+      await loadSettings();
+      await loadTodosForCurrentRange();
+      renderAll();
+      scheduleCurrentSlotUpdate();
+      setSyncStatus(state.supabase ? "saved" : "local", state.supabase ? "已儲存" : "本機暫存");
+    }
+
+    function bindEvents() {
+      els.prevWeekBtn.addEventListener("click", () => shiftWeek(-7));
+      els.nextWeekBtn.addEventListener("click", () => shiftWeek(7));
+      els.todayBtn.addEventListener("click", () => goToDate(todayKey()));
+      els.goDateBtn.addEventListener("click", () => goToDate(els.jumpDateInput.value || todayKey()));
+      els.jumpDateInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          goToDate(els.jumpDateInput.value || todayKey());
+        }
+      });
+      els.settingsBtn.addEventListener("click", toggleSettings);
+      els.saveSettingsBtn.addEventListener("click", saveSettingsFromForm);
+      els.clearTodayBtn.addEventListener("click", () => openDayMenu(todayKey(), els.clearTodayBtn));
+      els.copyTodayBtn.addEventListener("click", () => openDayMenu(todayKey(), els.copyTodayBtn, true));
+
+      els.calendarFrame.addEventListener("click", handleCalendarClick);
+      els.calendarFrame.addEventListener("input", handleCalendarInput);
+      els.calendarFrame.addEventListener("change", handleCalendarChange);
+      els.calendarFrame.addEventListener("keydown", handleCalendarKeydown);
+      els.calendarFrame.addEventListener("dragstart", handleDragStart);
+      els.calendarFrame.addEventListener("dragover", handleDragOver);
+      els.calendarFrame.addEventListener("dragleave", handleDragLeave);
+      els.calendarFrame.addEventListener("drop", handleDrop);
+      els.calendarFrame.addEventListener("dragend", clearDragStyles);
+      els.calendarFrame.addEventListener("touchstart", handleTouchStart, { passive: true });
+      els.calendarFrame.addEventListener("touchend", handleTouchEnd);
+
+      els.themeSelect.addEventListener("change", () => changeTheme(els.themeSelect.value));
+      els.addCommonItemBtn.addEventListener("click", addCommonItem);
+      els.commonItemInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") addCommonItem();
+      });
+      els.commonItemsList.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-common-delete]");
+        if (button) removeCommonItem(button.dataset.commonDelete);
+      });
+
+      els.scrim.addEventListener("click", closeDayMenu);
+      els.closeDayMenuBtn.addEventListener("click", closeDayMenu);
+      els.clearDayBtn.addEventListener("click", clearSelectedDay);
+      els.openCopyDayBtn.addEventListener("click", () => {
+        els.copyTargetBox.classList.toggle("is-open");
+        els.copyTargetInput.value = addDaysKey(state.selectedDay, 1);
+        els.copyTargetInput.focus();
+      });
+      els.confirmCopyBtn.addEventListener("click", copySelectedDay);
+    }
+
+    async function createSupabaseClient() {
+      const configured = /^https:\/\/.+\.supabase\.co$/i.test(SUPABASE_URL.trim()) && SUPABASE_ANON_KEY.trim().length > 40;
+      if (!configured) return null;
+
+      try {
+        await loadScriptWithFallback([
+          "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+          "https://unpkg.com/@supabase/supabase-js@2"
+        ]);
+        if (!window.supabase) throw new Error("Supabase SDK not found");
+        return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch (error) {
+        showToast("Supabase SDK 載入失敗，已切換為本機暫存。");
+        console.warn(error);
+        return null;
+      }
+    }
+
+    function loadScriptWithFallback(urls, index = 0) {
+      return new Promise((resolve, reject) => {
+        if (window.supabase) {
+          resolve();
+          return;
+        }
+        if (index >= urls.length) {
+          reject(new Error("All SDK sources failed"));
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = urls[index];
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => {
+          script.remove();
+          loadScriptWithFallback(urls, index + 1).then(resolve).catch(reject);
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    async function loadSettings() {
+      let settings = { ...DEFAULT_SETTINGS };
+      const localSettings = readJson("todo_app_settings", null);
+
+      if (state.supabase) {
+        try {
+          const { data, error } = await state.supabase
+            .from("app_settings")
+            .select("day_start, day_end, interval_minutes, theme_id, font_size, common_items")
+            .eq("id", 1)
+            .maybeSingle();
+          if (error) throw error;
+          if (data) settings = normalizeSettings(data);
+        } catch (error) {
+          showToast("讀取雲端設定失敗，已使用預設值。");
+          console.warn(error);
+        }
+      } else if (localSettings) {
+        settings = normalizeSettings(localSettings);
+      }
+
+      const localTheme = localStorage.getItem("todo_theme");
+      if (isValidTheme(localTheme)) {
+        settings.theme_id = localTheme;
+      }
+
+      state.settings = settings;
+      fillSettingsForm();
+      applyTheme(settings.theme_id);
+    }
+
+    async function loadTodosForCurrentRange() {
+      const start = addDaysKey(state.weekStart, -14);
+      const end = addDaysKey(state.weekStart, 27);
+      state.loadedRange = { start, end };
+
+      if (state.supabase) {
+        try {
+          const { data, error } = await state.supabase
+            .from("todos")
+            .select("*")
+            .eq("instance_id", state.instanceId)
+            .gte("todo_date", start)
+            .lte("todo_date", end)
+            .order("todo_date", { ascending: true })
+            .order("slot_start", { ascending: true })
+            .order("sort_order", { ascending: true });
+          if (error) throw error;
+          state.todos = (data || []).map(normalizeTodo);
+          return;
+        } catch (error) {
+          showToast("讀取雲端資料失敗，已改用本機暫存。");
+          console.warn(error);
+          state.syncMode = "local";
+          state.supabase = null;
+        }
+      }
+
+      state.todos = readLocalTodos().filter((todo) => todo.todo_date >= start && todo.todo_date <= end);
+    }
+
+    function renderAll() {
+      applyTheme(state.settings.theme_id);
+      applyFontSize(state.settings.font_size);
+      renderThemes();
+      fillSettingsForm();
+      renderCommonItems();
+      renderWeekTitle();
+      renderCalendar();
+    }
+
+    function renderWeekTitle() {
+      const end = addDaysKey(state.weekStart, 6);
+      els.weekTitle.textContent = `${formatFullDate(state.weekStart)}（${weekdayName(state.weekStart)}） - ${formatMonthDay(end)}（${weekdayName(end)}）`;
+    }
+
+    function renderCalendar() {
+      const days = Array.from({ length: 7 }, (_, index) => addDaysKey(state.weekStart, index));
+      const slots = generateSlots();
+      if (!slots.length) {
+        els.calendarFrame.innerHTML = '<div class="empty-state">時段設定無效，請調整每日時段。</div>';
+        return;
+      }
+
+      const today = todayKey();
+      const currentSlot = getCurrentSlotKey();
+      const grid = document.createElement("div");
+      grid.className = "schedule-grid";
+      grid.setAttribute("role", "grid");
+
+      const timeHead = document.createElement("div");
+      timeHead.className = "grid-cell time-head";
+      timeHead.textContent = "時間";
+      grid.appendChild(timeHead);
+
+      days.forEach((day) => {
+        const dayHead = document.createElement("button");
+        dayHead.type = "button";
+        dayHead.className = `grid-cell day-head${day === today ? " is-today" : ""}`;
+        dayHead.dataset.date = day;
+        dayHead.innerHTML = `
+          <span class="day-date">${formatShortDate(day)} ${weekdayName(day)}</span>
+          <span class="day-meta">${day === today ? "今天" : "點選操作"}</span>
+        `;
+        grid.appendChild(dayHead);
+      });
+
+      slots.forEach((slot) => {
+        const isCurrentRow = slot === currentSlot && days.includes(today);
+        const timeCell = document.createElement("div");
+        timeCell.className = `grid-cell time-cell${isCurrentRow ? " is-current" : ""}`;
+        timeCell.textContent = slot;
+        grid.appendChild(timeCell);
+
+        days.forEach((day) => {
+          const cellTodos = getTodosForCell(day, slot);
+          const slotCell = document.createElement("div");
+          const isCurrent = day === today && slot === currentSlot;
+          slotCell.className = [
+            "grid-cell",
+            "slot-cell",
+            day === today ? "is-today" : "",
+            isCurrent ? "is-current" : "",
+            cellTodos.length ? "has-todos" : ""
+          ].filter(Boolean).join(" ");
+          slotCell.dataset.date = day;
+          slotCell.dataset.time = slot;
+          slotCell.setAttribute("role", "gridcell");
+          slotCell.innerHTML = cellTodos.map(renderTodo).join("") + (cellTodos.length ? "" : `
+            <button class="quick-add" type="button" data-add-date="${day}" data-add-time="${slot}">＋ 新增</button>
+          `);
+          grid.appendChild(slotCell);
+        });
+      });
+
+      els.calendarFrame.replaceChildren(grid);
+    }
+
+    function renderTodo(todo) {
+      const classes = [
+        "todo-item",
+        todo.is_done ? "is-done" : "",
+        todo.color_tag === "important" ? "is-important" : ""
+      ].filter(Boolean).join(" ");
+      return `
+        <article class="${classes}" draggable="true" data-todo-id="${escapeAttr(todo.id)}">
+          <span class="drag-handle" title="拖曳">⋮⋮</span>
+          <span class="todo-text" contenteditable="true" spellcheck="false">${escapeHtml(todo.content)}</span>
+          <div class="todo-actions">
+            <select class="todo-action-select" data-action="common" aria-label="常用項目">
+              <option value="">常用</option>
+              ${renderCommonOptions()}
+            </select>
+            <button class="mini-button todo-action-button" type="button" data-action="add-near">新增</button>
+            <button class="mini-button todo-action-button" type="button" data-action="toggle">${todo.is_done ? "未完成" : "已完成"}</button>
+            <button class="mini-button todo-action-button" type="button" data-action="delete">刪除</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderThemes() {
+      els.themeSelect.innerHTML = THEMES.map((theme) => `
+        <option value="${theme.id}"${theme.id === state.settings.theme_id ? " selected" : ""}>${theme.name}</option>
+      `).join("");
+    }
+
+    function renderCommonOptions() {
+      return getCommonItems().map((item) => `<option value="${escapeAttr(item)}">${escapeHtml(item)}</option>`).join("");
+    }
+
+    function renderCommonItems() {
+      const items = getCommonItems();
+      els.commonItemsList.innerHTML = items.length
+        ? items.map((item) => `
+          <div class="common-item">
+            <span>${escapeHtml(item)}</span>
+            <button class="mini-button" type="button" data-common-delete="${escapeAttr(item)}">×</button>
+          </div>
+        `).join("")
+        : '<p class="hint">尚未設定常用項目。</p>';
+    }
+
+    function fillSettingsForm() {
+      els.dayStartInput.value = trimTime(state.settings.day_start);
+      els.dayEndInput.value = trimTime(state.settings.day_end);
+      els.intervalSelect.value = String(state.settings.interval_minutes);
+      els.themeSelect.value = state.settings.theme_id;
+      els.fontSizeSelect.value = state.settings.font_size;
+    }
+
+    async function shiftWeek(days) {
+      state.weekStart = addDaysKey(state.weekStart, days);
+      els.jumpDateInput.value = state.weekStart;
+      await loadTodosForCurrentRange();
+      renderAll();
+      scheduleCurrentSlotUpdate();
+    }
+
+    async function goToDate(dateKeyValue) {
+      if (!dateKeyValue) return;
+      state.weekStart = getMonday(dateKeyValue);
+      els.jumpDateInput.value = dateKeyValue;
+      await loadTodosForCurrentRange();
+      renderAll();
+      scheduleCurrentSlotUpdate();
+      requestAnimationFrame(() => {
+        const head = els.calendarFrame.querySelector(`.day-head[data-date="${dateKeyValue}"]`);
+        if (head) head.scrollIntoView({ inline: "center", block: "nearest" });
+      });
+    }
+
+    function toggleSettings() {
+      const isHidden = els.settingsPanel.hasAttribute("hidden");
+      if (isHidden) {
+        els.settingsPanel.removeAttribute("hidden");
+        els.settingsBtn.setAttribute("aria-expanded", "true");
+      } else {
+        els.settingsPanel.setAttribute("hidden", "");
+        els.settingsBtn.setAttribute("aria-expanded", "false");
+      }
+    }
+
+    async function saveSettingsFromForm() {
+      const nextSettings = normalizeSettings({
+        day_start: els.dayStartInput.value,
+        day_end: els.dayEndInput.value,
+        interval_minutes: Number(els.intervalSelect.value),
+        theme_id: state.settings.theme_id,
+        font_size: els.fontSizeSelect.value,
+        common_items: getCommonItems()
+      });
+
+      if (timeToMinutes(nextSettings.day_start) >= timeToMinutes(nextSettings.day_end)) {
+        showToast("起始時間必須早於結束時間。");
+        return;
+      }
+
+      state.settings = nextSettings;
+      applyFontSize(state.settings.font_size);
+      renderAll();
+      await persistSettings();
+      showToast("設定已更新。");
+    }
+
+    async function changeTheme(themeId) {
+      if (!isValidTheme(themeId)) return;
+      state.settings.theme_id = themeId;
+      localStorage.setItem("todo_theme", themeId);
+      applyTheme(themeId);
+      renderThemes();
+      await persistSettings();
+    }
+
+    async function addCommonItem() {
+      const item = els.commonItemInput.value.trim();
+      if (!item) return;
+      const items = getCommonItems();
+      if (!items.includes(item)) {
+        state.settings.common_items = [...items, item];
+      }
+      els.commonItemInput.value = "";
+      renderCommonItems();
+      renderCalendar();
+      await persistSettings();
+    }
+
+    async function removeCommonItem(item) {
+      state.settings.common_items = getCommonItems().filter((value) => value !== item);
+      renderCommonItems();
+      renderCalendar();
+      await persistSettings();
+    }
+
+    async function persistSettings() {
+      writeJson("todo_app_settings", state.settings);
+      if (!state.supabase) {
+        setSyncStatus("local", "本機暫存");
+        return;
+      }
+
+      setSyncStatus("saving", "雲端儲存中…");
+      const payload = {
+        id: 1,
+        day_start: trimTime(state.settings.day_start),
+        day_end: trimTime(state.settings.day_end),
+        interval_minutes: Number(state.settings.interval_minutes),
+        theme_id: state.settings.theme_id,
+        font_size: state.settings.font_size,
+        common_items: getCommonItems(),
+        updated_at: new Date().toISOString()
+      };
+      try {
+        const { error } = await state.supabase.from("app_settings").upsert(payload, { onConflict: "id" });
+        if (error) throw error;
+        setSyncStatus("saved", "已儲存");
+      } catch (error) {
+        queueRetry(() => persistSettings());
+        setSyncStatus("error", "無法同步，將自動重試");
+        console.warn(error);
+      }
+    }
+
+    function handleCalendarClick(event) {
+      const dayHead = event.target.closest(".day-head");
+      if (dayHead) {
+        openDayMenu(dayHead.dataset.date, dayHead);
+        return;
+      }
+
+      const actionButton = event.target.closest("[data-action]");
+      if (actionButton) {
+        const todoEl = actionButton.closest(".todo-item");
+        const todo = findTodo(todoEl?.dataset.todoId);
+        if (!todo) return;
+        const action = actionButton.dataset.action;
+        if (action === "toggle") toggleTodo(todo);
+        if (action === "delete") deleteTodo(todo);
+        if (action === "add-near") showAddInput(todo.todo_date, trimTime(todo.slot_start));
+        return;
+      }
+
+      const todoEl = event.target.closest(".todo-item");
+      if (todoEl) {
+        toggleTodoActions(todoEl);
+        return;
+      }
+
+      const addButton = event.target.closest("[data-add-date]");
+      if (addButton) {
+        closeTodoActions();
+        showAddInput(addButton.dataset.addDate, addButton.dataset.addTime);
+      }
+    }
+
+    function handleCalendarInput(event) {
+      const textEl = event.target.closest(".todo-text");
+      if (!textEl) return;
+      const todoEl = textEl.closest(".todo-item");
+      const todo = findTodo(todoEl?.dataset.todoId);
+      if (!todo) return;
+      todo.content = textEl.textContent.trim();
+      scheduleTodoTextSave(todo);
+    }
+
+    function handleCalendarChange(event) {
+      const commonSelect = event.target.closest('[data-action="common"]');
+      if (!commonSelect || !commonSelect.value) return;
+      const todoEl = commonSelect.closest(".todo-item");
+      const todo = findTodo(todoEl?.dataset.todoId);
+      if (!todo) return;
+      updateTodo(todo, { content: commonSelect.value });
+    }
+
+    function toggleTodoActions(todoEl) {
+      const wasOpen = todoEl.classList.contains("is-open");
+      closeTodoActions();
+      if (!wasOpen) todoEl.classList.add("is-open");
+    }
+
+    function closeTodoActions() {
+      els.calendarFrame.querySelectorAll(".todo-item.is-open").forEach((item) => item.classList.remove("is-open"));
+    }
+
+    function handleCalendarKeydown(event) {
+      const addInput = event.target.closest(".add-input");
+      if (addInput) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          submitAddInput(addInput);
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          renderCalendar();
+        }
+        return;
+      }
+
+      const textEl = event.target.closest(".todo-text");
+      if (textEl && event.key === "Enter") {
+        event.preventDefault();
+        textEl.blur();
+      }
+    }
+
+    function showAddInput(date, time) {
+      renderCalendar();
+      const slot = els.calendarFrame.querySelector(`.slot-cell[data-date="${date}"][data-time="${time}"]`);
+      if (!slot) return;
+      const addButton = slot.querySelector(".quick-add");
+      const row = document.createElement("div");
+      row.className = "add-row";
+      row.innerHTML = `
+        <input class="add-input" data-date="${date}" data-time="${time}" placeholder="輸入待辦事項">
+        <select class="add-common-select" aria-label="常用項目">
+          <option value="">常用</option>
+          ${renderCommonOptions()}
+        </select>
+        <button class="mini-button primary-button" type="button" data-add-submit>✓</button>
+        <button class="mini-button" type="button" data-add-cancel>×</button>
+      `;
+      if (addButton) {
+        addButton.replaceWith(row);
+      } else {
+        slot.appendChild(row);
+      }
+      row.querySelector("[data-add-submit]").addEventListener("click", () => submitAddInput(row.querySelector(".add-input")));
+      row.querySelector("[data-add-cancel]").addEventListener("click", renderCalendar);
+      row.querySelector(".add-common-select").addEventListener("change", (event) => {
+        row.querySelector(".add-input").value = event.target.value;
+        row.querySelector(".add-input").focus();
+      });
+      row.querySelector(".add-input").focus();
+    }
+
+    async function submitAddInput(input) {
+      const content = input.value.trim();
+      if (!content) {
+        renderCalendar();
+        return;
+      }
+      await addTodo(input.dataset.date, input.dataset.time, content);
+    }
+
+    async function addTodo(date, time, content) {
+      const sortOrder = getTodosForCell(date, time).length;
+      const todo = normalizeTodo({
+        id: `local-${crypto.randomUUID()}`,
+        instance_id: state.instanceId,
+        todo_date: date,
+        slot_start: time,
+        content,
+        is_done: false,
+        color_tag: "default",
+        sort_order: sortOrder,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      state.todos.push(todo);
+      saveLocalTodos();
+      renderCalendar();
+
+      if (!state.supabase) {
+        setSyncStatus("local", "本機暫存");
+        return;
+      }
+
+      setSyncStatus("saving", "雲端儲存中…");
+      try {
+        const payload = toSupabasePayload(todo, false);
+        const { data, error } = await state.supabase.from("todos").insert(payload).select().single();
+        if (error) throw error;
+        replaceTodo(todo.id, normalizeTodo(data));
+        saveLocalTodos();
+        renderCalendar();
+        setSyncStatus("saved", "已儲存");
+      } catch (error) {
+        queueRetry(() => addTodo(date, time, content));
+        setSyncStatus("error", "無法同步，將自動重試");
+        console.warn(error);
+      }
+    }
+
+    async function updateTodo(todo, patch, options = {}) {
+      Object.assign(todo, patch, { updated_at: new Date().toISOString() });
+      saveLocalTodos();
+      if (!options.skipRender) renderCalendar();
+
+      if (!state.supabase || isLocalId(todo.id)) {
+        setSyncStatus("local", "本機暫存");
+        return;
+      }
+
+      setSyncStatus("saving", "雲端儲存中…");
+      try {
+        const { error } = await state.supabase
+          .from("todos")
+          .update({ ...patch, updated_at: todo.updated_at })
+          .eq("id", todo.id)
+          .eq("instance_id", state.instanceId);
+        if (error) throw error;
+        setSyncStatus("saved", "已儲存");
+      } catch (error) {
+        queueRetry(() => updateTodo(todo, patch, options));
+        setSyncStatus("error", "無法同步，將自動重試");
+        console.warn(error);
+      }
+    }
+
+    function scheduleTodoTextSave(todo) {
+      const patch = { content: todo.content || "未命名" };
+      window.clearTimeout(state.dirtyTimers.get(todo.id));
+      state.dirtyTimers.set(todo.id, window.setTimeout(() => {
+        state.dirtyTimers.delete(todo.id);
+        window.clearTimeout(state.dirtyMaxTimers.get(todo.id));
+        state.dirtyMaxTimers.delete(todo.id);
+        updateTodo(todo, patch, { skipRender: true });
+      }, 800));
+
+      if (!state.dirtyMaxTimers.has(todo.id)) {
+        state.dirtyMaxTimers.set(todo.id, window.setTimeout(() => {
+          window.clearTimeout(state.dirtyTimers.get(todo.id));
+          state.dirtyTimers.delete(todo.id);
+          state.dirtyMaxTimers.delete(todo.id);
+          updateTodo(todo, patch, { skipRender: true });
+        }, 5000));
+      }
+      setSyncStatus(state.supabase ? "saving" : "local", state.supabase ? "雲端儲存中…" : "本機暫存");
+    }
+
+    async function toggleTodo(todo) {
+      await updateTodo(todo, { is_done: !todo.is_done });
+    }
+
+    async function toggleTag(todo) {
+      await updateTodo(todo, { color_tag: todo.color_tag === "important" ? "default" : "important" });
+    }
+
+    async function deleteTodo(todo) {
+      state.todos = state.todos.filter((item) => String(item.id) !== String(todo.id));
+      saveLocalTodos();
+      renderCalendar();
+
+      if (!state.supabase || isLocalId(todo.id)) {
+        setSyncStatus("local", "本機暫存");
+        return;
+      }
+
+      setSyncStatus("saving", "雲端儲存中…");
+      try {
+        const { error } = await state.supabase
+          .from("todos")
+          .delete()
+          .eq("id", todo.id)
+          .eq("instance_id", state.instanceId);
+        if (error) throw error;
+        setSyncStatus("saved", "已儲存");
+      } catch (error) {
+        queueRetry(() => deleteTodo(todo));
+        setSyncStatus("error", "無法同步，將自動重試");
+        console.warn(error);
+      }
+    }
+
+    function handleDragStart(event) {
+      const todoEl = event.target.closest(".todo-item");
+      if (!todoEl) return;
+      state.draggedTodoId = todoEl.dataset.todoId;
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", state.draggedTodoId);
+    }
+
+    function handleDragOver(event) {
+      const slot = event.target.closest(".slot-cell");
+      const todoEl = event.target.closest(".todo-item");
+      if (!slot && !todoEl) return;
+      event.preventDefault();
+      if (todoEl && todoEl.dataset.todoId !== state.draggedTodoId) {
+        todoEl.classList.add("is-drag-over");
+      } else if (slot) {
+        slot.classList.add("is-drop-target");
+      }
+    }
+
+    function handleDragLeave(event) {
+      const target = event.target.closest(".slot-cell, .todo-item");
+      if (target) {
+        target.classList.remove("is-drop-target", "is-drag-over");
+      }
+    }
+
+    async function handleDrop(event) {
+      const draggedId = state.draggedTodoId || event.dataTransfer.getData("text/plain");
+      const draggedTodo = findTodo(draggedId);
+      if (!draggedTodo) return;
+      event.preventDefault();
+
+      const targetTodoEl = event.target.closest(".todo-item");
+      const targetSlot = event.target.closest(".slot-cell");
+      clearDragStyles();
+
+      if (targetTodoEl && targetTodoEl.dataset.todoId !== draggedId) {
+        const targetTodo = findTodo(targetTodoEl.dataset.todoId);
+        if (targetTodo) {
+          await moveTodoBefore(draggedTodo, targetTodo);
+          return;
+        }
+      }
+
+      if (targetSlot) {
+        await moveTodoToSlot(draggedTodo, targetSlot.dataset.date, targetSlot.dataset.time);
+      }
+    }
+
+    function clearDragStyles() {
+      state.draggedTodoId = null;
+      els.calendarFrame.querySelectorAll(".is-drop-target, .is-drag-over").forEach((el) => {
+        el.classList.remove("is-drop-target", "is-drag-over");
+      });
+    }
+
+    async function moveTodoToSlot(todo, date, time) {
+      const nextOrder = getTodosForCell(date, time).filter((item) => String(item.id) !== String(todo.id)).length;
+      await updateTodo(todo, { todo_date: date, slot_start: time, sort_order: nextOrder });
+      await normalizeCellOrders(date, time);
+    }
+
+    async function moveTodoBefore(todo, targetTodo) {
+      todo.todo_date = targetTodo.todo_date;
+      todo.slot_start = targetTodo.slot_start;
+      const cellTodos = getTodosForCell(targetTodo.todo_date, targetTodo.slot_start).filter((item) => String(item.id) !== String(todo.id));
+      const targetIndex = cellTodos.findIndex((item) => String(item.id) === String(targetTodo.id));
+      cellTodos.splice(Math.max(targetIndex, 0), 0, todo);
+      await persistOrder(cellTodos);
+    }
+
+    async function normalizeCellOrders(date, time) {
+      await persistOrder(getTodosForCell(date, time));
+    }
+
+    async function persistOrder(cellTodos) {
+      const updates = cellTodos.map((todo, index) => {
+        todo.sort_order = index;
+        todo.updated_at = new Date().toISOString();
+        return todo;
+      });
+      saveLocalTodos();
+      renderCalendar();
+
+      if (!state.supabase) {
+        setSyncStatus("local", "本機暫存");
+        return;
+      }
+
+      setSyncStatus("saving", "雲端儲存中…");
+      try {
+        const cloudUpdates = updates
+          .filter((todo) => !isLocalId(todo.id))
+          .map((todo) => state.supabase
+            .from("todos")
+            .update({
+              todo_date: todo.todo_date,
+              slot_start: todo.slot_start,
+              sort_order: todo.sort_order,
+              updated_at: todo.updated_at
+            })
+            .eq("id", todo.id)
+            .eq("instance_id", state.instanceId));
+        const results = await Promise.all(cloudUpdates);
+        const failed = results.find((result) => result.error);
+        if (failed) throw failed.error;
+        setSyncStatus("saved", "已儲存");
+      } catch (error) {
+        queueRetry(() => persistOrder(cellTodos));
+        setSyncStatus("error", "無法同步，將自動重試");
+        console.warn(error);
+      }
+    }
+
+    function openDayMenu(date, anchor, openCopy = false) {
+      state.selectedDay = date;
+      els.dayMenuTitle.textContent = `${formatFullDate(date)}（${weekdayName(date)}）`;
+      els.copyTargetBox.classList.toggle("is-open", openCopy);
+      els.copyTargetInput.value = addDaysKey(date, 1);
+      els.scrim.hidden = false;
+      els.dayMenu.hidden = false;
+
+      const rect = anchor.getBoundingClientRect();
+      const width = Math.min(360, window.innerWidth - 24);
+      const left = Math.min(Math.max(12, rect.left), window.innerWidth - width - 12);
+      const top = Math.min(rect.bottom + 8, window.innerHeight - 260);
+      els.dayMenu.style.left = `${left}px`;
+      els.dayMenu.style.top = `${Math.max(12, top)}px`;
+
+      if (openCopy) els.copyTargetInput.focus();
+    }
+
+    function closeDayMenu() {
+      els.dayMenu.hidden = true;
+      els.scrim.hidden = true;
+      els.copyTargetBox.classList.remove("is-open");
+    }
+
+    async function clearSelectedDay() {
+      const date = state.selectedDay;
+      if (!date) return;
+      if (!confirm(`確定清除 ${formatShortDate(date)} 全部行程？`)) return;
+      const deleted = state.todos.filter((todo) => todo.todo_date === date);
+      state.todos = state.todos.filter((todo) => todo.todo_date !== date);
+      saveLocalTodos();
+      closeDayMenu();
+      renderCalendar();
+
+      if (!state.supabase) {
+        setSyncStatus("local", "本機暫存");
+        return;
+      }
+
+      setSyncStatus("saving", "雲端儲存中…");
+      try {
+        const { error } = await state.supabase
+          .from("todos")
+          .delete()
+          .eq("instance_id", state.instanceId)
+          .eq("todo_date", date);
+        if (error) throw error;
+        setSyncStatus("saved", "已儲存");
+      } catch (error) {
+        state.todos.push(...deleted);
+        saveLocalTodos();
+        renderCalendar();
+        queueRetry(() => clearSelectedDay());
+        setSyncStatus("error", "無法同步，將自動重試");
+        console.warn(error);
+      }
+    }
+
+    async function copySelectedDay() {
+      const sourceDate = state.selectedDay;
+      const targetDate = els.copyTargetInput.value;
+      if (!sourceDate || !targetDate) return;
+      if (sourceDate === targetDate) {
+        showToast("目標日期不可與來源日期相同。");
+        return;
+      }
+
+      const sourceTodos = getTodosForDay(sourceDate).slice(0, 100);
+      if (!sourceTodos.length) {
+        showToast("該日沒有可複製的事項。");
+        return;
+      }
+
+      const copies = sourceTodos.map((todo, index) => normalizeTodo({
+        id: `local-${crypto.randomUUID()}`,
+        instance_id: state.instanceId,
+        todo_date: targetDate,
+        slot_start: todo.slot_start,
+        content: todo.content,
+        is_done: false,
+        color_tag: todo.color_tag,
+        sort_order: getTodosForCell(targetDate, todo.slot_start).length + index,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
+      state.todos.push(...copies);
+      saveLocalTodos();
+      closeDayMenu();
+      renderCalendar();
+
+      if (!state.supabase) {
+        setSyncStatus("local", "本機暫存");
+        return;
+      }
+
+      setSyncStatus("saving", "雲端儲存中…");
+      try {
+        const payload = copies.map((todo) => toSupabasePayload(todo, false));
+        const { data, error } = await state.supabase.from("todos").insert(payload).select();
+        if (error) throw error;
+        copies.forEach((copy, index) => replaceTodo(copy.id, normalizeTodo(data[index])));
+        saveLocalTodos();
+        renderCalendar();
+        setSyncStatus("saved", "已儲存");
+      } catch (error) {
+        queueRetry(() => copySelectedDay());
+        setSyncStatus("error", "無法同步，將自動重試");
+        console.warn(error);
+      }
+    }
+
+    function handleTouchStart(event) {
+      const touch = event.changedTouches[0];
+      state.touchStart = { x: touch.clientX, y: touch.clientY };
+    }
+
+    function handleTouchEnd(event) {
+      if (!state.touchStart) return;
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - state.touchStart.x;
+      const dy = touch.clientY - state.touchStart.y;
+      state.touchStart = null;
+      if (Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+      if (dx > 0) {
+        shiftWeek(7);
+      } else {
+        shiftWeek(-7);
+      }
+    }
+
+    function scheduleCurrentSlotUpdate() {
+      window.clearTimeout(state.currentTimer);
+      const now = new Date();
+      const msToNextMinute = 60000 - (now.getSeconds() * 1000 + now.getMilliseconds());
+      state.currentTimer = window.setTimeout(() => {
+        renderCalendar();
+        scheduleCurrentSlotUpdate();
+      }, msToNextMinute + 50);
+    }
+
+    function queueRetry(task) {
+      state.retryQueue.push(task);
+      if (state.retryTimer) return;
+      state.retryTimer = window.setTimeout(runRetryQueue, 5000);
+    }
+
+    async function runRetryQueue() {
+      state.retryTimer = null;
+      if (!state.retryQueue.length) return;
+      const tasks = state.retryQueue.splice(0, state.retryQueue.length);
+      for (const task of tasks) {
+        try {
+          await task();
+        } catch (error) {
+          console.warn(error);
+        }
+      }
+    }
+
+    function setSyncStatus(stateName, text) {
+      els.syncStatus.dataset.state = stateName;
+      els.syncText.textContent = text;
+    }
+
+    function showToast(message) {
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.textContent = message;
+      els.toastStack.appendChild(toast);
+      window.setTimeout(() => toast.remove(), 3600);
+    }
+
+    function getTodosForCell(date, time) {
+      return state.todos
+        .filter((todo) => todo.todo_date === date && trimTime(todo.slot_start) === time)
+        .sort((a, b) => Number(a.sort_order) - Number(b.sort_order));
+    }
+
+    function getTodosForDay(date) {
+      return state.todos
+        .filter((todo) => todo.todo_date === date)
+        .sort((a, b) => {
+          if (a.slot_start === b.slot_start) return Number(a.sort_order) - Number(b.sort_order);
+          return a.slot_start.localeCompare(b.slot_start);
+        });
+    }
+
+    function findTodo(id) {
+      return state.todos.find((todo) => String(todo.id) === String(id));
+    }
+
+    function replaceTodo(oldId, nextTodo) {
+      const index = state.todos.findIndex((todo) => String(todo.id) === String(oldId));
+      if (index >= 0) state.todos.splice(index, 1, nextTodo);
+    }
+
+    function normalizeTodo(todo) {
+      return {
+        id: todo.id,
+        instance_id: todo.instance_id || state.instanceId,
+        todo_date: todo.todo_date,
+        slot_start: trimTime(todo.slot_start),
+        content: String(todo.content || "未命名"),
+        is_done: Boolean(todo.is_done),
+        color_tag: todo.color_tag === "important" ? "important" : "default",
+        sort_order: Number(todo.sort_order || 0),
+        created_at: todo.created_at || new Date().toISOString(),
+        updated_at: todo.updated_at || new Date().toISOString()
+      };
+    }
+
+    function toSupabasePayload(todo, includeId = true) {
+      const payload = {
+        instance_id: state.instanceId,
+        todo_date: todo.todo_date,
+        slot_start: trimTime(todo.slot_start),
+        content: todo.content || "未命名",
+        is_done: Boolean(todo.is_done),
+        color_tag: todo.color_tag || "default",
+        sort_order: Number(todo.sort_order || 0),
+        updated_at: new Date().toISOString()
+      };
+      if (includeId && !isLocalId(todo.id)) payload.id = todo.id;
+      return payload;
+    }
+
+    function normalizeSettings(settings) {
+      const interval = [10, 15, 30, 60].includes(Number(settings.interval_minutes))
+        ? Number(settings.interval_minutes)
+        : DEFAULT_SETTINGS.interval_minutes;
+      const dayStart = isTime(settings.day_start) ? trimTime(settings.day_start) : DEFAULT_SETTINGS.day_start;
+      const dayEnd = isTime(settings.day_end) ? trimTime(settings.day_end) : DEFAULT_SETTINGS.day_end;
+      return {
+        day_start: dayStart,
+        day_end: timeToMinutes(dayEnd) > timeToMinutes(dayStart) ? dayEnd : DEFAULT_SETTINGS.day_end,
+        interval_minutes: interval,
+        theme_id: isValidTheme(settings.theme_id) ? settings.theme_id : DEFAULT_SETTINGS.theme_id,
+        font_size: isValidFontSize(settings.font_size) ? settings.font_size : DEFAULT_SETTINGS.font_size,
+        common_items: normalizeCommonItems(settings.common_items)
+      };
+    }
+
+    function isValidFontSize(size) {
+      return ["small", "medium", "large", "xlarge"].includes(size);
+    }
+
+    function applyFontSize(size) {
+      const values = {
+        small: "13px",
+        medium: "15px",
+        large: "17px",
+        xlarge: "19px"
+      };
+      document.documentElement.style.setProperty("--todo-font-size", values[isValidFontSize(size) ? size : "medium"]);
+    }
+
+    function normalizeCommonItems(items) {
+      if (!Array.isArray(items)) return [];
+      return [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))];
+    }
+
+    function getCommonItems() {
+      return normalizeCommonItems(state.settings.common_items);
+    }
+
+    function generateSlots() {
+      const slots = [];
+      const start = timeToMinutes(state.settings.day_start);
+      const end = timeToMinutes(state.settings.day_end);
+      const interval = Number(state.settings.interval_minutes);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) return slots;
+      for (let minute = start; minute < end; minute += interval) {
+        slots.push(minutesToTime(minute));
+      }
+      return slots;
+    }
+
+    function getCurrentSlotKey() {
+      const now = getTaipeiParts(new Date());
+      const total = Number(now.hour) * 60 + Number(now.minute);
+      const start = timeToMinutes(state.settings.day_start);
+      const end = timeToMinutes(state.settings.day_end);
+      const interval = Number(state.settings.interval_minutes);
+      if (total < start || total >= end) return "";
+      return minutesToTime(total - ((total - start) % interval));
+    }
+
+    function getInstanceId() {
+      let id = localStorage.getItem("todo_instance_id");
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem("todo_instance_id", id);
+      }
+      return id;
+    }
+
+    function applyStoredTheme() {
+      const themeId = localStorage.getItem("todo_theme");
+      applyTheme(isValidTheme(themeId) ? themeId : DEFAULT_SETTINGS.theme_id);
+    }
+
+    function applyTheme(themeId) {
+      const safeTheme = isValidTheme(themeId) ? themeId : DEFAULT_SETTINGS.theme_id;
+      els.body.dataset.theme = safeTheme;
+      localStorage.setItem("todo_theme", safeTheme);
+    }
+
+    function isValidTheme(themeId) {
+      return THEMES.some((theme) => theme.id === themeId);
+    }
+
+    function readLocalTodos() {
+      return readJson(`todo_items_${state.instanceId}`, []).map(normalizeTodo);
+    }
+
+    function saveLocalTodos() {
+      writeJson(`todo_items_${state.instanceId}`, state.todos);
+    }
+
+    function readJson(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (error) {
+        console.warn(error);
+        return fallback;
+      }
+    }
+
+    function writeJson(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function todayKey() {
+      const parts = getTaipeiParts(new Date());
+      return `${parts.year}-${parts.month}-${parts.day}`;
+    }
+
+    function getTaipeiParts(date) {
+      const formatter = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Taipei",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23"
+      });
+      return formatter.formatToParts(date).reduce((acc, part) => {
+        if (part.type !== "literal") acc[part.type] = part.value;
+        return acc;
+      }, {});
+    }
+
+    function dateFromKey(dateKeyValue) {
+      const [year, month, day] = dateKeyValue.split("-").map(Number);
+      return new Date(Date.UTC(year, month - 1, day));
+    }
+
+    function dateToKey(date) {
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(date.getUTCDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function addDaysKey(dateKeyValue, days) {
+      const date = dateFromKey(dateKeyValue);
+      date.setUTCDate(date.getUTCDate() + days);
+      return dateToKey(date);
+    }
+
+    function getMonday(dateKeyValue) {
+      const date = dateFromKey(dateKeyValue);
+      const day = date.getUTCDay();
+      const offset = day === 0 ? -6 : 1 - day;
+      date.setUTCDate(date.getUTCDate() + offset);
+      return dateToKey(date);
+    }
+
+    function weekdayName(dateKeyValue) {
+      return WEEKDAYS[dateFromKey(dateKeyValue).getUTCDay()];
+    }
+
+    function formatFullDate(dateKeyValue) {
+      const [year, month, day] = dateKeyValue.split("-");
+      return `${year}/${month}/${day}`;
+    }
+
+    function formatMonthDay(dateKeyValue) {
+      const [, month, day] = dateKeyValue.split("-");
+      return `${month}/${day}`;
+    }
+
+    function formatShortDate(dateKeyValue) {
+      const [, month, day] = dateKeyValue.split("-");
+      return `${Number(month)}/${Number(day)}`;
+    }
+
+    function isTime(value) {
+      return /^\d{2}:\d{2}(:\d{2})?$/.test(String(value || ""));
+    }
+
+    function trimTime(value) {
+      return String(value || "").slice(0, 5);
+    }
+
+    function timeToMinutes(value) {
+      const [hour, minute] = trimTime(value).split(":").map(Number);
+      return hour * 60 + minute;
+    }
+
+    function minutesToTime(total) {
+      const hour = Math.floor(total / 60);
+      const minute = total % 60;
+      return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    }
+
+    function isLocalId(id) {
+      return String(id).startsWith("local-");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value);
+    }
+  </script>
+</body>
+</html>

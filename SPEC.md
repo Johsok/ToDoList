@@ -35,6 +35,8 @@
 | **K** | **自動存檔** | 開頁即同步讀取；改動即寫入 Supabase（類 Google Sheets） |
 | **L** | **年月日選擇** | 可選年／月／日跳轉並編輯該日時段事項 |
 | **M** | **顏色標籤** | 重要事項可標示不同顏色 |
+| **N** | **常用項目** | 可在設定中維護常用待辦，並於每筆項目的下拉選單套用 |
+| **O** | **文字大小設定** | 設定中可選待辦文字大小，並同步記憶至 Supabase |
 
 ### 1.3 技術棧
 
@@ -67,6 +69,8 @@
 | 12 | **自動同步存檔** | 開頁讀取；改動自動寫入 Supabase | ✅ 新增 |
 | 13 | **年月日跳轉** | 日期選擇器指定某日編輯 | ✅ 新增 |
 | 14 | **顏色標籤** | 事項可標重要色 | ✅ 新增 |
+| 15 | **常用項目設定** | 設定中新增／刪除常用項目，寫入 Supabase，任務卡可下拉套用 | ✅ 新增 |
+| 16 | **文字大小設定** | 可選小／中／大／特大，設定同步至 Supabase | ✅ 新增 |
 
 ---
 
@@ -177,6 +181,8 @@
 | 顏色標籤變更 | 立即 | `update` |
 | 清除當日／複製 | 操作完成後 | `delete` / 批次 `insert` |
 | 設定變更 | 按儲存後 | `upsert` app_settings |
+| 常用項目變更 | 新增／刪除後立即 | `upsert` app_settings.common_items |
+| 文字大小變更 | 按儲存後 | `upsert` app_settings.font_size |
 
 **備援機制**：若 800ms 防抖期間持續輸入，最遲每 **5 秒**強制將未同步的 dirty 狀態寫入一次。
 
@@ -224,6 +230,25 @@
 | 跨日期／時段 | 變更 `todo_date` / `slot_start` | 放手即 `update` |
 | 把手 | 左側 `⋮⋮` | — |
 
+### 3.12 常用項目（N）
+
+- 設定面板預設隱藏，需點「設定」才展開。
+- 設定面板提供「常用設定」，可新增／刪除常用項目。
+- 常用項目儲存在 `app_settings.common_items`，型別為 `jsonb` 陣列。
+- 每筆待辦項目的功能列預設隱藏；點擊該項目後才顯示「刪除」「常用」「新增」「已完成」。
+- 「常用」以下拉式選單呈現，選取後會把待辦文字改為該常用項目並自動同步。
+- 「新增」會在同一日期與時段開啟手寫輸入框，輸入列右側提供「常用」下拉、同意與取消按鈕。
+- 若該格已有項目，格內不顯示「＋新增」入口；需從項目展開功能列新增。若該格沒有項目，才顯示「＋新增」入口。
+- 「已完成」會切換刪除線樣式與 `is_done` 狀態。
+- 所有下拉式選單需使用深色背景，避免深色主題中白底造成文字不可讀。
+
+### 3.13 文字大小設定（O）
+
+- 設定面板提供「文字大小」選項：`small`、`medium`、`large`、`xlarge`。
+- 預設值為 `medium`。
+- 設定會同步到 `app_settings.font_size`，下次開啟頁面時套用。
+- 文字大小主要影響待辦項目文字，不改變週曆核心邏輯。
+
 ---
 
 ## 4. 資料庫設計（Supabase）
@@ -237,9 +262,11 @@
 | `day_end` | `time` | 預設 `22:00` |
 | `interval_minutes` | `int` | 預設 `30` |
 | `theme_id` | `text` | 預設 `'dark'`；允許 10 種經典配色 theme |
+| `common_items` | `jsonb` | 預設 `[]`；常用待辦項目文字陣列 |
+| `font_size` | `text` | 預設 `'medium'`；允許 `small`、`medium`、`large`、`xlarge` |
 | `updated_at` | `timestamptz` | 最後更新；由前端每次更新時帶入目前時間 |
 
-> `app_settings` 採全域設定，固定 `id = 1`。本專案以「打開即可用、方便優先」為目標，因此所有公開使用者共用同一組起始時間、結束時間、間隔時間與全域 theme 設定；個別瀏覽器仍可用 `localStorage.todo_theme` 記住本機偏好的 theme。
+> `app_settings` 採全域設定，固定 `id = 1`。本專案以「打開即可用、方便優先」為目標，因此所有公開使用者共用同一組起始時間、結束時間、間隔時間、全域 theme、文字大小與常用項目設定；個別瀏覽器仍可用 `localStorage.todo_theme` 記住本機偏好的 theme。
 
 ### 4.2 資料表：`todos`
 
@@ -283,6 +310,8 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 | 清除當日 | `delete().eq('instance_id',id).eq('todo_date', date)` |
 | 複製當日 | 讀取來源日 → 批次 `insert` 至目標日 |
 | 設定 | `upsert` app_settings |
+| 常用項目 | `upsert` app_settings.common_items |
+| 文字大小 | `upsert` app_settings.font_size |
 
 > `updated_at` 不使用資料庫 trigger；所有 `update` / `upsert` 由前端帶入目前時間，確保最後更新時間可追蹤。
 
@@ -323,9 +352,10 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 ### 5.3 單格互動
 
 1. 顯示待辦（依 `sort_order`）
-2. 每筆：`⋮⋮`｜☐｜文字（點擊編輯）｜🏷 色標｜刪除
-3. **點空白區** → 該格輸入框 focus 新增
-4. 格底常駐「＋」備用入口
+2. 每筆預設只顯示：`⋮⋮`｜置中的單行待辦文字，不換行；過長時省略。
+3. 點擊待辦項目後，才顯示浮動功能列：`刪除`｜`常用` 下拉｜`新增`｜`已完成`。
+4. **空格無事項時**顯示「＋新增」；空格已有事項時隱藏「＋新增」。
+5. 從功能列點「新增」時，同格底部出現輸入框，右側含「常用」下拉、同意與取消。
 
 ### 5.4 日期欄頭選單（清除／複製）
 
@@ -349,6 +379,9 @@ CREATE INDEX idx_todos_date_range ON todos (todo_date);
 | 每日開始 | `06:00` |
 | 每日結束 | `22:00` |
 | 時間間隔 | `30` 分 |
+| 外觀 Theme | 下拉式選單 |
+| 文字大小 | `medium` |
+| 常用設定 | 可新增／刪除常用項目 |
 | 儲存 | `upsert` 後重繪 |
 
 ### 5.6 載入與錯誤
@@ -415,6 +448,9 @@ ToDoList/
 13. 起始時間、結束時間、間隔時間可修改
 14. 修改每日時段設定後，時間軸需即時重繪
 15. Supabase 讀取設定失敗時，回到預設值：`06:00`、`22:00`、`30`、`dark`
+16. 設定面板預設隱藏，點「設定」才展開
+17. 常用項目可新增／刪除並同步到 Supabase，待辦項目可從「常用」下拉套用
+18. 文字大小設定可同步到 Supabase，重新整理後仍套用
 
 ---
 
@@ -470,6 +506,9 @@ CREATE TABLE app_settings (
   interval_minutes int NOT NULL DEFAULT 30 CHECK (interval_minutes IN (10, 15, 30, 60)),
   theme_id text NOT NULL DEFAULT 'dark'
     CHECK (theme_id IN ('dark', 'midnight', 'forest', 'sunrise', 'minimal', 'classic_blue', 'nord', 'dracula', 'solarized', 'high_contrast')),
+  common_items jsonb NOT NULL DEFAULT '[]'::jsonb,
+  font_size text NOT NULL DEFAULT 'medium'
+    CHECK (font_size IN ('small', 'medium', 'large', 'xlarge')),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -554,6 +593,8 @@ function getInstanceId() {
 | v0.2 | 2026-06-26 | 確認 A～G；無登入；拖曳；Supabase／Pages 步驟 |
 | v0.3 | 2026-06-26 | 新增：當日清除／複製、現在時段高亮、空白格新增、Google Sheets 式自動存檔、年月日跳轉、顏色標籤；移除 instance_id UI 備份 |
 | v0.4 | 2026-06-26 | 修正：公開無登入使用、`theme_id` schema、10 種經典配色、`updated_at` 前端更新規則、手機與電腦執行確認、iPhone Safari 主畫面注意事項 |
+| v0.5 | 2026-06-26 | 調整：待辦項目單行不換行、點擊後才顯示功能列、設定面板預設隱藏、Theme 改下拉選單、新增常用項目設定與 `common_items` 欄位 |
+| v0.6 | 2026-06-26 | 調整：有項目格隱藏「＋新增」、新增列支援常用下拉、所有下拉改深色背景、項目置中且欄寬依內容撐開、新增 `font_size` 設定 |
 
 ---
 
@@ -591,9 +632,8 @@ function getInstanceId() {
 #### Theme UI
 
 - 在設定面板中提供 theme 選擇控制。
-- 可用下拉選單、分段按鈕、色票按鈕或 theme 卡片方式呈現。
-- 每個 theme 至少需顯示名稱與小型色票預覽。
-- 目前選中的 theme 需有清楚狀態，例如外框、高亮或勾選圖示。
+- Theme 控制採下拉式選單呈現。
+- 目前選中的 theme 需透過原生選取狀態清楚標示。
 
 ### 15.2 每日時段設定
 
@@ -620,13 +660,17 @@ function getInstanceId() {
 
 ```
 外觀 Theme
-[深色模式] [午夜藍] [森林綠] [日出暖色] [極簡灰白]
-[經典藍白] [Nord 冷灰] [Dracula 紫黑] [Solarized] [高對比]
+[深色模式 v]
 
 每日時段
 起始時間  [06:00]
 結束時間  [22:00]
 間隔時間  [30 分鐘 v]
+文字大小  [中 v]
+
+常用設定
+[輸入常用項目] [新增]
+[會議] [刪除]
 ```
 
 ### 15.3 `app_settings` 資料欄位補充
@@ -636,6 +680,8 @@ function getInstanceId() {
 | 欄位 | 型別 | 預設值 | 說明 |
 |------|------|--------|------|
 | `theme_id` | `text` | `'dark'` | 目前使用的全域 theme；前端仍可用 `localStorage.todo_theme` 記住本機偏好。 |
+| `common_items` | `jsonb` | `[]` | 常用待辦項目文字陣列，供每筆待辦的「常用」下拉選單套用。 |
+| `font_size` | `text` | `'medium'` | 待辦項目文字大小設定，允許 `small`、`medium`、`large`、`xlarge`。 |
 
 建議允許值：`dark`、`midnight`、`forest`、`sunrise`、`minimal`、`classic_blue`、`nord`、`dracula`、`solarized`、`high_contrast`。
 
