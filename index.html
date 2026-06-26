@@ -29,7 +29,15 @@
       --shadow: 0 18px 50px rgba(0, 0, 0, 0.26);
       --radius: 8px;
       --time-col: 72px;
-      --day-col: minmax(max-content, 1fr);
+      --day-col-min: 104px;
+      --day-col-max: 360px;
+      --day-col-0: var(--day-col-min);
+      --day-col-1: var(--day-col-min);
+      --day-col-2: var(--day-col-min);
+      --day-col-3: var(--day-col-min);
+      --day-col-4: var(--day-col-min);
+      --day-col-5: var(--day-col-min);
+      --day-col-6: var(--day-col-min);
       --slot-height: 48px;
       --todo-font-size: 15px;
       --focus: 0 0 0 3px rgba(79, 172, 254, 0.28);
@@ -471,7 +479,17 @@
 
     .schedule-grid {
       display: grid;
-      grid-template-columns: var(--time-col) repeat(7, var(--day-col));
+      width: max-content;
+      min-width: 100%;
+      grid-template-columns:
+        var(--time-col)
+        minmax(var(--day-col-min), var(--day-col-0))
+        minmax(var(--day-col-min), var(--day-col-1))
+        minmax(var(--day-col-min), var(--day-col-2))
+        minmax(var(--day-col-min), var(--day-col-3))
+        minmax(var(--day-col-min), var(--day-col-4))
+        minmax(var(--day-col-min), var(--day-col-5))
+        minmax(var(--day-col-min), var(--day-col-6));
       align-items: stretch;
     }
 
@@ -797,6 +815,10 @@
       outline: none;
     }
 
+    .add-input::placeholder {
+      color: var(--muted);
+    }
+
     .add-common-select {
       min-width: 78px;
       min-height: 36px;
@@ -821,6 +843,16 @@
 
     .settings-panel[hidden] {
       display: none;
+    }
+
+    .mobile-settings-tools {
+      display: none;
+    }
+
+    .mobile-settings-tools + .panel-section {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
     }
 
     .panel-section + .panel-section {
@@ -1060,38 +1092,52 @@
     @media (max-width: 767px) {
       .app-shell {
         padding: 14px;
-        gap: 14px;
+        gap: 10px;
+      }
+
+      .topbar {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+      }
+
+      .brand-mark,
+      .jump-controls,
+      .top-actions .sync-status,
+      .day-actions,
+      .calendar-icon {
+        display: none;
+      }
+
+      .brand {
+        min-height: 44px;
       }
 
       h1 {
-        font-size: 24px;
+        font-size: 22px;
       }
 
-      .brand-mark {
-        width: 38px;
-        height: 38px;
+      .top-actions {
+        width: auto;
+        justify-content: flex-end;
       }
 
-      .jump-controls,
-      .top-actions,
-      .calendar-toolbar,
-      .week-nav,
-      .day-actions {
-        width: 100%;
+      .top-actions .text-button {
+        flex: 0 0 auto;
       }
 
       .calendar-toolbar {
-        align-items: stretch;
-        flex-direction: column;
+        display: block;
       }
 
       .week-title {
-        font-size: 19px;
+        justify-content: center;
+        font-size: 17px;
+        text-align: center;
       }
 
-      .day-actions,
-      .week-nav {
-        justify-content: space-between;
+      .main-layout,
+      .calendar-area {
+        min-height: 0;
       }
 
       .date-input {
@@ -1104,18 +1150,75 @@
       }
 
       .calendar-frame {
-        max-height: calc(100svh - 264px);
-        min-height: 420px;
+        height: calc(100svh - 132px);
+        max-height: none;
+        min-height: 0;
       }
 
       .schedule-grid {
         --time-col: 66px;
-        --day-col: minmax(max-content, 1fr);
+        --day-col-min: 104px;
+        --day-col-max: 320px;
         --slot-height: 54px;
       }
 
       .settings-panel {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        top: 72px;
+        z-index: 40;
+        max-height: calc(100svh - 92px);
+        overflow: auto;
         padding: 14px;
+      }
+
+      .mobile-settings-tools {
+        display: block;
+      }
+
+      .mobile-settings-tools + .panel-section {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--grid-soft);
+      }
+
+      .mobile-settings-row,
+      .mobile-week-nav {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .mobile-settings-row {
+        margin-top: 10px;
+      }
+
+      .mobile-week-nav .text-button,
+      .mobile-settings-row .text-button,
+      .mobile-settings-row .date-input {
+        flex: 1 1 auto;
+      }
+
+      .mobile-sync-status {
+        width: 100%;
+        margin-top: 10px;
+      }
+
+      .time-head {
+        left: 0;
+        top: 0;
+        z-index: 8;
+      }
+
+      .day-head {
+        top: 0;
+        z-index: 7;
+      }
+
+      .time-cell {
+        left: 0;
+        z-index: 6;
       }
 
       .action-sheet {
@@ -1181,6 +1284,23 @@
       </section>
 
       <aside class="settings-panel" id="settingsPanel" hidden>
+        <section class="panel-section mobile-settings-tools">
+          <h2 class="section-title">週表操作</h2>
+          <div class="mobile-week-nav" aria-label="週切換">
+            <button class="text-button" id="mobilePrevWeekBtn" type="button">上週</button>
+            <button class="text-button" id="mobileTodayBtn" type="button">今天</button>
+            <button class="text-button" id="mobileNextWeekBtn" type="button">下週</button>
+          </div>
+          <div class="mobile-settings-row" aria-label="日期跳轉">
+            <input class="date-input" id="mobileJumpDateInput" type="date" aria-label="選擇日期">
+            <button class="text-button primary-button" id="mobileGoDateBtn" type="button">前往</button>
+          </div>
+          <div class="sync-status mobile-sync-status" data-mobile-sync-status data-state="saving" aria-live="polite">
+            <span data-mobile-sync-text>載入中…</span>
+            <span class="sync-dot" aria-hidden="true"></span>
+          </div>
+        </section>
+
         <section class="panel-section">
           <h2 class="section-title">外觀 Theme</h2>
           <select class="select-control" id="themeSelect" aria-label="外觀 Theme"></select>
@@ -1276,6 +1396,10 @@
     ];
 
     const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+    const DAY_COLUMN_MIN_WIDTH = 104;
+    const DAY_COLUMN_MAX_WIDTH = 360;
+    const DAY_COLUMN_TODO_CHROME_WIDTH = 72;
+    let textMeasureContext = null;
     const state = {
       instanceId: "",
       supabase: null,
@@ -1303,6 +1427,11 @@
       prevWeekBtn: document.getElementById("prevWeekBtn"),
       nextWeekBtn: document.getElementById("nextWeekBtn"),
       todayBtn: document.getElementById("todayBtn"),
+      mobileJumpDateInput: document.getElementById("mobileJumpDateInput"),
+      mobileGoDateBtn: document.getElementById("mobileGoDateBtn"),
+      mobilePrevWeekBtn: document.getElementById("mobilePrevWeekBtn"),
+      mobileNextWeekBtn: document.getElementById("mobileNextWeekBtn"),
+      mobileTodayBtn: document.getElementById("mobileTodayBtn"),
       clearTodayBtn: document.getElementById("clearTodayBtn"),
       copyTodayBtn: document.getElementById("copyTodayBtn"),
       settingsBtn: document.getElementById("settingsBtn"),
@@ -1335,7 +1464,7 @@
     async function init() {
       state.instanceId = getInstanceId();
       state.weekStart = getMonday(todayKey());
-      els.jumpDateInput.value = todayKey();
+      setJumpDateInputs(todayKey());
       bindEvents();
       renderThemes();
       setSyncStatus("saving", "載入中…");
@@ -1357,9 +1486,18 @@
       els.nextWeekBtn.addEventListener("click", () => shiftWeek(7));
       els.todayBtn.addEventListener("click", () => goToDate(todayKey()));
       els.goDateBtn.addEventListener("click", () => goToDate(els.jumpDateInput.value || todayKey()));
+      els.mobilePrevWeekBtn.addEventListener("click", () => shiftWeek(-7));
+      els.mobileNextWeekBtn.addEventListener("click", () => shiftWeek(7));
+      els.mobileTodayBtn.addEventListener("click", () => goToDate(todayKey()));
+      els.mobileGoDateBtn.addEventListener("click", () => goToDate(els.mobileJumpDateInput.value || todayKey()));
       els.jumpDateInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           goToDate(els.jumpDateInput.value || todayKey());
+        }
+      });
+      els.mobileJumpDateInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          goToDate(els.mobileJumpDateInput.value || todayKey());
         }
       });
       els.settingsBtn.addEventListener("click", toggleSettings);
@@ -1398,6 +1536,7 @@
         els.copyTargetInput.focus();
       });
       els.confirmCopyBtn.addEventListener("click", copySelectedDay);
+      window.addEventListener("resize", renderWeekTitle);
     }
 
     async function createSupabaseClient() {
@@ -1514,7 +1653,9 @@
 
     function renderWeekTitle() {
       const end = addDaysKey(state.weekStart, 6);
-      els.weekTitle.textContent = `${formatFullDate(state.weekStart)}（${weekdayName(state.weekStart)}） - ${formatMonthDay(end)}（${weekdayName(end)}）`;
+      els.weekTitle.textContent = isMobileLayout()
+        ? `${formatFullDate(state.weekStart)} (${weekdayName(state.weekStart)}) ~ ${formatMonthDay(end)} (${weekdayName(end)})`
+        : `${formatFullDate(state.weekStart)}（${weekdayName(state.weekStart)}） - ${formatMonthDay(end)}（${weekdayName(end)}）`;
     }
 
     function renderCalendar() {
@@ -1530,6 +1671,7 @@
       const grid = document.createElement("div");
       grid.className = "schedule-grid";
       grid.setAttribute("role", "grid");
+      applyDayColumnWidths(grid, days);
 
       const timeHead = document.createElement("div");
       timeHead.className = "grid-cell time-head";
@@ -1542,7 +1684,7 @@
         dayHead.className = `grid-cell day-head${day === today ? " is-today" : ""}`;
         dayHead.dataset.date = day;
         dayHead.innerHTML = `
-          <span class="day-date">${formatShortDate(day)} ${weekdayName(day)}</span>
+          <span class="day-date">${formatColumnDate(day)}</span>
         `;
         grid.appendChild(dayHead);
       });
@@ -1574,6 +1716,30 @@
       });
 
       els.calendarFrame.replaceChildren(grid);
+    }
+
+    function applyDayColumnWidths(grid, days) {
+      days.forEach((day, index) => {
+        grid.style.setProperty(`--day-col-${index}`, `${getDayColumnWidth(day)}px`);
+      });
+    }
+
+    function getDayColumnWidth(day) {
+      const headerWidth = measureUiText(formatColumnDate(day)) + 28;
+      const todoWidth = getTodosForDay(day).reduce((width, todo) => {
+        return Math.max(width, measureUiText(todo.content || "未命名") + DAY_COLUMN_TODO_CHROME_WIDTH);
+      }, 0);
+      return Math.round(Math.min(DAY_COLUMN_MAX_WIDTH, Math.max(DAY_COLUMN_MIN_WIDTH, headerWidth, todoWidth)));
+    }
+
+    function measureUiText(text) {
+      if (!textMeasureContext) {
+        textMeasureContext = document.createElement("canvas").getContext("2d");
+      }
+      const fontSize = getComputedStyle(document.documentElement).getPropertyValue("--todo-font-size").trim() || "15px";
+      const fontFamily = getComputedStyle(document.body).fontFamily || "sans-serif";
+      textMeasureContext.font = `${fontSize} ${fontFamily}`;
+      return textMeasureContext.measureText(String(text || "")).width;
     }
 
     function renderTodo(todo) {
@@ -1636,7 +1802,7 @@
 
     async function shiftWeek(days) {
       state.weekStart = addDaysKey(state.weekStart, days);
-      els.jumpDateInput.value = state.weekStart;
+      setJumpDateInputs(state.weekStart);
       await loadTodosForCurrentRange();
       renderAll();
       scheduleCurrentSlotUpdate();
@@ -1645,7 +1811,7 @@
     async function goToDate(dateKeyValue) {
       if (!dateKeyValue) return;
       state.weekStart = getMonday(dateKeyValue);
-      els.jumpDateInput.value = dateKeyValue;
+      setJumpDateInputs(dateKeyValue);
       await loadTodosForCurrentRange();
       renderAll();
       scheduleCurrentSlotUpdate();
@@ -1867,10 +2033,10 @@
       const row = document.createElement("div");
       row.className = "add-row";
       row.innerHTML = `
-        <input class="add-input" data-date="${date}" data-time="${time}" placeholder="輸入待辦事項">
+        <input class="add-input" data-date="${date}" data-time="${time}" placeholder="輸入其他文字">
         <div class="add-controls">
           <select class="add-common-select" aria-label="常用項目">
-            <option value="">常用</option>
+            <option value="">選常用</option>
             ${renderCommonOptions()}
           </select>
           <button class="mini-button primary-button" type="button" data-add-submit>✓</button>
@@ -2292,6 +2458,21 @@
     function setSyncStatus(stateName, text) {
       els.syncStatus.dataset.state = stateName;
       els.syncText.textContent = text;
+      document.querySelectorAll("[data-mobile-sync-status]").forEach((item) => {
+        item.dataset.state = stateName;
+      });
+      document.querySelectorAll("[data-mobile-sync-text]").forEach((item) => {
+        item.textContent = text;
+      });
+    }
+
+    function setJumpDateInputs(value) {
+      els.jumpDateInput.value = value;
+      els.mobileJumpDateInput.value = value;
+    }
+
+    function isMobileLayout() {
+      return window.matchMedia("(max-width: 767px)").matches;
     }
 
     function showToast(message) {
@@ -2505,6 +2686,11 @@
     function formatMonthDay(dateKeyValue) {
       const [, month, day] = dateKeyValue.split("-");
       return `${month}/${day}`;
+    }
+
+    function formatColumnDate(dateKeyValue) {
+      const [, month, day] = dateKeyValue.split("-");
+      return `${month}/${day}(${weekdayName(dateKeyValue)})`;
     }
 
     function formatShortDate(dateKeyValue) {
