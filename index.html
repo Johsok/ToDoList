@@ -1251,6 +1251,7 @@
   <script>
     const SUPABASE_URL = "https://doicpmczzvharnszpbsr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_c46aC5fxRALpXswtxy8aIA_E-LHxIu9";
+    const APP_SETTINGS_ID = 1;
 
     const DEFAULT_SETTINGS = {
       day_start: "06:00",
@@ -1451,7 +1452,7 @@
           const { data, error } = await state.supabase
             .from("app_settings")
             .select("day_start, day_end, interval_minutes, theme_id, font_size, common_items")
-            .eq("id", 1)
+            .eq("id", APP_SETTINGS_ID)
             .maybeSingle();
           if (error) throw error;
           settings = normalizeSettings(data || DEFAULT_SETTINGS);
@@ -1709,6 +1710,9 @@
       await persistSettings();
     }
 
+    /**
+     * Updates the singleton settings row instead of inserting, avoiding app_settings INSERT RLS failures.
+     */
     async function persistSettings() {
       if (!requireCloudClient()) {
         return;
@@ -1728,11 +1732,11 @@
         const { data, error } = await state.supabase
           .from("app_settings")
           .update(payload)
-          .eq("id", 1)
+          .eq("id", APP_SETTINGS_ID)
           .select("id")
           .maybeSingle();
         if (error) throw error;
-        if (!data) throw new Error("app_settings id=1 不存在或 anon 無法更新，請先建立 id=1 並檢查 Supabase RLS 的 SELECT / UPDATE policy。");
+        if (!data) throw new Error(`app_settings id=${APP_SETTINGS_ID} 不存在或 anon 無法更新，請先建立固定設定列並檢查 Supabase RLS 的 SELECT / UPDATE policy。`);
         setSyncStatus("saved", "同步雲端");
       } catch (error) {
         if (!isPermanentSupabaseError(error)) {
