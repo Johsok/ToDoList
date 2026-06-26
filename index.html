@@ -1414,7 +1414,13 @@
           "https://unpkg.com/@supabase/supabase-js@2"
         ]);
         if (!window.supabase) throw new Error("Supabase SDK not found");
-        return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+          }
+        });
       } catch (error) {
         showToast("Supabase SDK 載入失敗，無法同步雲端。");
         console.warn(error);
@@ -1711,7 +1717,7 @@
     }
 
     /**
-     * Updates the singleton settings row instead of inserting, avoiding app_settings INSERT RLS failures.
+     * Updates and verifies the singleton settings row without inserting a new app_settings row.
      */
     async function persistSettings() {
       if (!requireCloudClient()) {
@@ -1729,14 +1735,24 @@
         updated_at: new Date().toISOString()
       };
       try {
-        const { data, error } = await state.supabase
+        const { error } = await state.supabase
           .from("app_settings")
           .update(payload)
-          .eq("id", APP_SETTINGS_ID)
-          .select("id")
-          .maybeSingle();
+          .eq("id", APP_SETTINGS_ID);
         if (error) throw error;
-        if (!data) throw new Error(`app_settings id=${APP_SETTINGS_ID} 不存在或 anon 無法更新，請先建立固定設定列並檢查 Supabase RLS 的 SELECT / UPDATE policy。`);
+
+        const { data: savedSettings, error: readError } = await state.supabase
+          .from("app_settings")
+          .select("day_start, day_end, interval_minutes, theme_id, font_size, common_items")
+          .eq("id", APP_SETTINGS_ID)
+          .maybeSingle();
+        if (readError) throw readError;
+        if (!savedSettings) throw new Error(`app_settings id=${APP_SETTINGS_ID} 不存在，請先建立固定設定列。`);
+        if (!settingsPayloadMatches(savedSettings, payload)) {
+          throw new Error("設定未寫入 Supabase，請檢查 app_settings 的 anon UPDATE policy。");
+        }
+
+        state.settings = normalizeSettings(savedSettings);
         setSyncStatus("saved", "同步雲端");
       } catch (error) {
         if (!isPermanentSupabaseError(error)) {
@@ -2268,7 +2284,9 @@
         code === "42501" ||
         message.includes("could not find") ||
         message.includes("permission denied") ||
-        message.includes("row-level security");
+        message.includes("row-level security") ||
+        message.includes("anon update policy") ||
+        message.includes("設定未寫入");
     }
 
     function setSyncStatus(stateName, text) {
@@ -2356,6 +2374,17 @@
 
     function isValidFontSize(size) {
       return ["small", "medium", "large", "xlarge"].includes(size);
+    }
+
+    function settingsPayloadMatches(savedSettings, payload) {
+      const saved = normalizeSettings(savedSettings);
+      const expected = normalizeSettings(payload);
+      return saved.day_start === expected.day_start &&
+        saved.day_end === expected.day_end &&
+        saved.interval_minutes === expected.interval_minutes &&
+        saved.theme_id === expected.theme_id &&
+        saved.font_size === expected.font_size &&
+        JSON.stringify(saved.common_items) === JSON.stringify(expected.common_items);
     }
 
     function applyFontSize(size) {
