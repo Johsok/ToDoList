@@ -21,8 +21,8 @@
       --accent: #4facfe;
       --accent-strong: #2f9dff;
       --today: rgba(79, 172, 254, 0.12);
-      --now: rgba(255, 183, 77, 0.25);
-      --now-line: #ffb74d;
+      --now: rgba(80, 227, 194, 0.28);
+      --now-line: #50e3c2;
       --important: #ff6b6b;
       --important-bg: rgba(255, 107, 107, 0.15);
       --done: 0.55;
@@ -170,8 +170,8 @@
       --accent: #00e5ff;
       --accent-strong: #fff200;
       --today: rgba(0, 229, 255, 0.16);
-      --now: rgba(255, 242, 0, 0.22);
-      --now-line: #fff200;
+      --now: rgba(0, 255, 194, 0.24);
+      --now-line: #00ffc2;
       --important: #ff3b30;
       --important-bg: rgba(255, 59, 48, 0.23);
     }
@@ -547,7 +547,7 @@
       min-height: var(--slot-height);
       padding: 8px 10px;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: center;
       background: color-mix(in srgb, var(--surface-strong), transparent 15%);
       color: var(--text);
@@ -563,7 +563,7 @@
     }
 
     .time-cell.is-current::before {
-      content: "";
+      content: none;
       width: 0;
       height: 0;
       border-top: 6px solid transparent;
@@ -586,6 +586,10 @@
       transition: background 120ms ease, outline-color 120ms ease;
     }
 
+    .slot-cell.is-open {
+      z-index: 8;
+    }
+
     .slot-cell.has-todos {
       align-items: center;
     }
@@ -602,7 +606,7 @@
       color: #fff8e1;
       outline: 2px solid var(--now-line);
       outline-offset: -2px;
-      box-shadow: inset 0 0 0 1px rgba(255, 248, 225, 0.24), 0 0 22px rgba(255, 183, 77, 0.25);
+      box-shadow: inset 0 0 0 1px rgba(225, 255, 249, 0.3), 0 0 22px rgba(80, 227, 194, 0.28);
     }
 
     .slot-cell.is-drop-target {
@@ -721,7 +725,7 @@
       position: absolute;
       left: 4px;
       right: 4px;
-      top: calc(100% + 5px);
+      top: 4px;
       z-index: 12;
       display: none;
       align-items: center;
@@ -734,8 +738,7 @@
       backdrop-filter: blur(18px);
     }
 
-    .todo-item.is-open .todo-actions,
-    .todo-item:focus-within .todo-actions {
+    .slot-cell.is-open .todo-actions {
       display: flex;
     }
 
@@ -779,11 +782,29 @@
 
     .add-row {
       display: grid;
-      width: 100%;
-      align-self: stretch;
-      grid-template-columns: minmax(0, 1fr) minmax(78px, auto) 34px 34px;
+      width: 50%;
+      max-width: 50%;
+      min-width: 0;
+      align-self: flex-start;
+      grid-template-columns: minmax(0, 1fr);
       gap: 5px;
       margin-top: 2px;
+    }
+
+    .add-controls {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      z-index: 13;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px;
+      border: 1px solid var(--grid);
+      border-radius: 7px;
+      background: color-mix(in srgb, var(--surface-strong), #000 20%);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
     }
 
     .add-input {
@@ -1543,7 +1564,6 @@
         dayHead.dataset.date = day;
         dayHead.innerHTML = `
           <span class="day-date">${formatShortDate(day)} ${weekdayName(day)}</span>
-          <span class="day-meta">${day === today ? "今天" : "點選操作"}</span>
         `;
         grid.appendChild(dayHead);
       });
@@ -1569,7 +1589,7 @@
           slotCell.dataset.date = day;
           slotCell.dataset.time = slot;
           slotCell.setAttribute("role", "gridcell");
-          slotCell.innerHTML = cellTodos.map(renderTodo).join("") + (cellTodos.length ? "" : `
+          slotCell.innerHTML = (cellTodos.length ? renderCellActions(cellTodos[0]) : "") + cellTodos.map(renderTodo).join("") + (cellTodos.length ? "" : `
             <button class="quick-add" type="button" data-add-date="${day}" data-add-time="${slot}">＋ 新增</button>
           `);
           grid.appendChild(slotCell);
@@ -1589,16 +1609,21 @@
         <article class="${classes}" draggable="true" data-todo-id="${escapeAttr(todo.id)}">
           <span class="drag-handle" title="拖曳">⋮⋮</span>
           <span class="todo-text" contenteditable="true" spellcheck="false">${escapeHtml(todo.content)}</span>
-          <div class="todo-actions">
-            <select class="todo-action-select" data-action="common" aria-label="常用項目">
-              <option value="">常用</option>
-              ${renderCommonOptions()}
-            </select>
-            <button class="mini-button todo-action-button" type="button" data-action="add-near">新增</button>
-            <button class="mini-button todo-action-button" type="button" data-action="toggle">${todo.is_done ? "未完成" : "已完成"}</button>
-            <button class="mini-button todo-action-button" type="button" data-action="delete">刪除</button>
-          </div>
         </article>
+      `;
+    }
+
+    function renderCellActions(todo) {
+      return `
+        <div class="todo-actions" data-active-todo-id="${escapeAttr(todo.id)}">
+          <select class="todo-action-select" data-action="common" aria-label="常用項目">
+            <option value="">常用</option>
+            ${renderCommonOptions()}
+          </select>
+          <button class="mini-button todo-action-button" type="button" data-action="add-near">新增</button>
+          <button class="mini-button todo-action-button" type="button" data-action="delete">刪除</button>
+          <button class="mini-button todo-action-button" type="button" data-action="toggle">${todo.is_done ? "未完成" : "已完成"}</button>
+        </div>
       `;
     }
 
@@ -1753,8 +1778,8 @@
 
       const actionButton = event.target.closest("[data-action]");
       if (actionButton) {
-        const todoEl = actionButton.closest(".todo-item");
-        const todo = findTodo(todoEl?.dataset.todoId);
+        const actions = actionButton.closest(".todo-actions");
+        const todo = findTodo(actions?.dataset.activeTodoId);
         if (!todo) return;
         const action = actionButton.dataset.action;
         if (action === "toggle") toggleTodo(todo);
@@ -1765,7 +1790,7 @@
 
       const todoEl = event.target.closest(".todo-item");
       if (todoEl) {
-        toggleTodoActions(todoEl);
+        openSlotActions(todoEl.closest(".slot-cell"), todoEl.dataset.todoId);
         return;
       }
 
@@ -1773,6 +1798,22 @@
       if (addButton) {
         closeTodoActions();
         showAddInput(addButton.dataset.addDate, addButton.dataset.addTime);
+        return;
+      }
+
+      if (event.target.closest(".add-row")) {
+        return;
+      }
+
+      const slot = event.target.closest(".slot-cell");
+      if (slot) {
+        const firstTodo = slot.querySelector(".todo-item");
+        if (firstTodo) {
+          openSlotActions(slot, firstTodo.dataset.todoId);
+        } else {
+          closeTodoActions();
+          showAddInput(slot.dataset.date, slot.dataset.time);
+        }
       }
     }
 
@@ -1789,20 +1830,28 @@
     function handleCalendarChange(event) {
       const commonSelect = event.target.closest('[data-action="common"]');
       if (!commonSelect || !commonSelect.value) return;
-      const todoEl = commonSelect.closest(".todo-item");
-      const todo = findTodo(todoEl?.dataset.todoId);
+      const actions = commonSelect.closest(".todo-actions");
+      const todo = findTodo(actions?.dataset.activeTodoId);
       if (!todo) return;
       updateTodo(todo, { content: commonSelect.value });
     }
 
-    function toggleTodoActions(todoEl) {
-      const wasOpen = todoEl.classList.contains("is-open");
+    function openSlotActions(slot, todoId) {
+      if (!slot || !todoId) return;
+      const wasOpen = slot.classList.contains("is-open") && slot.querySelector(".todo-actions")?.dataset.activeTodoId === String(todoId);
       closeTodoActions();
-      if (!wasOpen) todoEl.classList.add("is-open");
+      if (wasOpen) return;
+      const actions = slot.querySelector(".todo-actions");
+      const todo = findTodo(todoId);
+      if (actions && todo) {
+        actions.dataset.activeTodoId = todoId;
+        actions.querySelector('[data-action="toggle"]').textContent = todo.is_done ? "未完成" : "已完成";
+      }
+      slot.classList.add("is-open");
     }
 
     function closeTodoActions() {
-      els.calendarFrame.querySelectorAll(".todo-item.is-open").forEach((item) => item.classList.remove("is-open"));
+      els.calendarFrame.querySelectorAll(".slot-cell.is-open").forEach((item) => item.classList.remove("is-open"));
     }
 
     function handleCalendarKeydown(event) {
@@ -1835,12 +1884,14 @@
       row.className = "add-row";
       row.innerHTML = `
         <input class="add-input" data-date="${date}" data-time="${time}" placeholder="輸入待辦事項">
-        <select class="add-common-select" aria-label="常用項目">
-          <option value="">常用</option>
-          ${renderCommonOptions()}
-        </select>
-        <button class="mini-button primary-button" type="button" data-add-submit>✓</button>
-        <button class="mini-button" type="button" data-add-cancel>×</button>
+        <div class="add-controls">
+          <select class="add-common-select" aria-label="常用項目">
+            <option value="">常用</option>
+            ${renderCommonOptions()}
+          </select>
+          <button class="mini-button primary-button" type="button" data-add-submit>✓</button>
+          <button class="mini-button" type="button" data-add-cancel>×</button>
+        </div>
       `;
       if (addButton) {
         addButton.replaceWith(row);
