@@ -1740,8 +1740,8 @@
       els.mobileTodayBtn.addEventListener("click", () => goToDate(todayKey()));
       els.todayViewBtn.addEventListener("click", () => changeViewMode("today"));
       els.weekViewBtn.addEventListener("click", () => changeViewMode("week"));
-      els.prevDayBtn.addEventListener("click", () => shiftActiveDay(-1));
-      els.nextDayBtn.addEventListener("click", () => shiftActiveDay(1));
+      els.prevDayBtn.addEventListener("click", () => shiftViewStep(-1));
+      els.nextDayBtn.addEventListener("click", () => shiftViewStep(1));
       els.mobileGoDateBtn.addEventListener("click", () => goToDate(els.mobileJumpDateInput.value || todayKey()));
       els.jumpDateInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
@@ -1798,6 +1798,7 @@
 
     function handleResize() {
       renderWeekTitle();
+      renderViewModeControls();
       if (state.loadedRange) renderCalendar();
     }
 
@@ -2000,7 +2001,7 @@
           slotCell.dataset.date = day;
           slotCell.dataset.time = slot;
           slotCell.setAttribute("role", "gridcell");
-          slotCell.innerHTML = (cellTodos.length ? renderCellActions(cellTodos[0]) : "") + cellTodos.map(renderTodo).join("");
+          slotCell.innerHTML = renderCellActions(cellTodos[0], day, slot) + cellTodos.map(renderTodo).join("");
           grid.appendChild(slotCell);
         });
       });
@@ -2070,16 +2071,21 @@
       `;
     }
 
-    function renderCellActions(todo) {
+    function renderCellActions(todo, date, time) {
+      const hasTodo = Boolean(todo);
       return `
-        <div class="todo-actions" data-active-todo-id="${escapeAttr(todo.id)}">
-          <select class="todo-action-select" data-action="common" aria-label="常用項目">
-            <option value="">常用</option>
-            ${renderCommonOptions()}
-          </select>
+        <div class="todo-actions" data-active-todo-id="${hasTodo ? escapeAttr(todo.id) : ""}" data-slot-date="${escapeAttr(date)}" data-slot-time="${escapeAttr(time)}">
+          ${hasTodo ? `
+            <select class="todo-action-select" data-action="common" aria-label="常用項目">
+              <option value="">常用</option>
+              ${renderCommonOptions()}
+            </select>
+          ` : ""}
           <button class="mini-button todo-action-button" type="button" data-action="add-near">新增</button>
-          <button class="mini-button todo-action-button" type="button" data-action="delete">刪除</button>
-          <button class="mini-button todo-action-button" type="button" data-action="toggle">${todo.is_done ? "未完成" : "已完成"}</button>
+          ${hasTodo ? `
+            <button class="mini-button todo-action-button" type="button" data-action="delete">刪除</button>
+            <button class="mini-button todo-action-button" type="button" data-action="toggle">${todo.is_done ? "未完成" : "已完成"}</button>
+          ` : ""}
         </div>
       `;
     }
@@ -2116,10 +2122,11 @@
       els.weekViewBtn.classList.toggle("is-active", !isTodayMode);
       els.todayViewBtn.setAttribute("aria-pressed", String(isTodayMode));
       els.weekViewBtn.setAttribute("aria-pressed", String(!isTodayMode));
-      els.prevDayBtn.setAttribute("title", isTodayMode ? "上一日" : "選取上一日");
-      els.nextDayBtn.setAttribute("title", isTodayMode ? "下一日" : "選取下一日");
-      els.prevDayBtn.setAttribute("aria-label", isTodayMode ? "上一日" : "選取上一日");
-      els.nextDayBtn.setAttribute("aria-label", isTodayMode ? "下一日" : "選取下一日");
+      const isDesktopWeekMode = !isTodayMode && !isMobileLayout();
+      els.prevDayBtn.setAttribute("title", isTodayMode ? "上一日" : isDesktopWeekMode ? "上一週" : "選取上一日");
+      els.nextDayBtn.setAttribute("title", isTodayMode ? "下一日" : isDesktopWeekMode ? "下一週" : "選取下一日");
+      els.prevDayBtn.setAttribute("aria-label", isTodayMode ? "上一日" : isDesktopWeekMode ? "上一週" : "選取上一日");
+      els.nextDayBtn.setAttribute("aria-label", isTodayMode ? "下一日" : isDesktopWeekMode ? "下一週" : "選取下一日");
     }
 
     function fillSettingsForm() {
@@ -2176,6 +2183,15 @@
       renderAll();
       scheduleCurrentSlotUpdate();
       scrollToActiveDate();
+    }
+
+    async function shiftViewStep(direction) {
+      const step = direction < 0 ? -1 : 1;
+      if (state.settings.view_mode === "week" && !isMobileLayout()) {
+        await shiftWeek(step * 7);
+        return;
+      }
+      await shiftActiveDay(step);
     }
 
     function getActiveDate() {
@@ -2354,12 +2370,18 @@
       const actionButton = event.target.closest("[data-action]");
       if (actionButton) {
         const actions = actionButton.closest(".todo-actions");
+        const action = actionButton.dataset.action;
+        if (action === "add-near") {
+          const date = actions?.dataset.slotDate;
+          const time = actions?.dataset.slotTime;
+          if (date && time) showAddInput(date, time);
+          return;
+        }
+
         const todo = findTodo(actions?.dataset.activeTodoId);
         if (!todo) return;
-        const action = actionButton.dataset.action;
         if (action === "toggle") toggleTodo(todo);
         if (action === "delete") deleteTodo(todo);
-        if (action === "add-near") showAddInput(todo.todo_date, trimTime(todo.slot_start));
         return;
       }
 
@@ -2379,8 +2401,8 @@
 
       const slot = event.target.closest(".slot-cell");
       if (slot) {
-        closeTodoActions();
-        showAddInput(slot.dataset.date, slot.dataset.time);
+        const firstTodoId = slot.querySelector(".todo-item")?.dataset.todoId || "";
+        openSlotActions(slot, firstTodoId);
       }
     }
 
@@ -2403,16 +2425,20 @@
       updateTodo(todo, { content: commonSelect.value });
     }
 
-    function openSlotActions(slot, todoId) {
-      if (!slot || !todoId) return;
-      const wasOpen = slot.classList.contains("is-open") && slot.querySelector(".todo-actions")?.dataset.activeTodoId === String(todoId);
+    function openSlotActions(slot, todoId = "") {
+      if (!slot) return;
+      const actions = slot.querySelector(".todo-actions");
+      if (!actions) return;
+      const activeTodoId = String(todoId || "");
+      const wasOpen = slot.classList.contains("is-open") && actions.dataset.activeTodoId === activeTodoId;
       closeTodoActions();
       if (wasOpen) return;
-      const actions = slot.querySelector(".todo-actions");
-      const todo = findTodo(todoId);
+      const todo = findTodo(activeTodoId);
       if (actions && todo) {
-        actions.dataset.activeTodoId = todoId;
+        actions.dataset.activeTodoId = activeTodoId;
         actions.querySelector('[data-action="toggle"]').textContent = todo.is_done ? "未完成" : "已完成";
+      } else {
+        actions.dataset.activeTodoId = "";
       }
       slot.classList.add("is-open");
     }
