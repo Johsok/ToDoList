@@ -694,6 +694,10 @@
       z-index: 8;
     }
 
+    .slot-cell.is-adding {
+      z-index: 8;
+    }
+
     .slot-cell.has-todos {
       align-items: center;
     }
@@ -936,6 +940,17 @@
       background: #111827;
     }
 
+    .schedule-grid.is-today-view .slot-cell.is-open,
+    .schedule-grid.is-today-view .slot-cell.is-adding {
+      z-index: 30;
+      overflow: visible;
+    }
+
+    .schedule-grid.is-today-view .slot-cell.is-open .todo-actions,
+    .schedule-grid.is-today-view .slot-cell.is-adding .add-row {
+      z-index: 32;
+    }
+
     .settings-panel {
       position: fixed;
       top: 84px;
@@ -1065,7 +1080,7 @@
 
     .common-item {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       align-items: center;
       gap: 8px;
       padding: 7px 8px;
@@ -1079,6 +1094,17 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .common-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .common-actions .mini-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
     }
 
     .primary-button {
@@ -1254,30 +1280,39 @@
 
       .calendar-toolbar {
         align-items: center;
-        gap: 8px;
+        gap: 6px;
       }
 
       .range-bar {
         flex: 1 1 auto;
-        justify-content: center;
-        flex-wrap: wrap;
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        gap: 4px;
       }
 
       .week-title {
-        flex: 1 1 100%;
-        justify-content: center;
-        font-size: 14px;
-        text-align: center;
+        flex: 1 1 auto;
+        justify-content: flex-start;
+        min-width: 0;
+        font-size: 12px;
+        text-align: left;
+      }
+
+      .view-toggle {
+        gap: 2px;
+        padding: 2px;
       }
 
       .view-mode-button {
-        width: 34px;
-        min-height: 30px;
+        width: 28px;
+        min-height: 28px;
+        font-size: 13px;
       }
 
       .view-step-button {
-        width: 30px;
-        min-height: 30px;
+        width: 28px;
+        min-height: 28px;
+        font-size: 15px;
       }
 
       .main-layout,
@@ -1301,10 +1336,59 @@
       }
 
       .schedule-grid {
-        --time-col: 66px;
-        --day-col-min: 104px;
-        --day-col-max: 320px;
-        --slot-height: 54px;
+        --time-col: 42px;
+        --day-col-min: 42px;
+        --day-col-max: 64px;
+        --slot-height: 48px;
+      }
+
+      .schedule-grid.is-week-view {
+        width: 100%;
+        min-width: 100%;
+      }
+
+      .schedule-grid.is-week-view .time-head,
+      .schedule-grid.is-week-view .day-head {
+        min-height: 42px;
+      }
+
+      .schedule-grid.is-week-view .time-head {
+        font-size: 11px;
+      }
+
+      .schedule-grid.is-week-view .day-head {
+        padding: 3px 1px;
+      }
+
+      .schedule-grid.is-week-view .day-date {
+        display: grid;
+        gap: 1px;
+        font-size: 10px;
+        line-height: 1.05;
+      }
+
+      .schedule-grid.is-week-view .time-cell {
+        padding: 4px 2px;
+        font-size: 10px;
+      }
+
+      .schedule-grid.is-week-view .slot-cell {
+        min-height: var(--slot-height);
+        padding: 2px;
+        gap: 2px;
+      }
+
+      .schedule-grid.is-week-view .todo-item {
+        width: 100%;
+        min-height: 26px;
+        gap: 2px;
+        padding: 3px 2px;
+        border-left-width: 2px;
+        font-size: 10px;
+      }
+
+      .schedule-grid.is-week-view .todo-text {
+        padding: 1px;
       }
 
       .settings-panel {
@@ -1553,8 +1637,11 @@
     ];
 
     const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+    const DESKTOP_TIME_COLUMN_WIDTH = 72;
+    const MOBILE_TIME_COLUMN_WIDTH = 42;
     const DAY_COLUMN_MIN_WIDTH = 104;
     const DAY_COLUMN_MAX_WIDTH = 360;
+    const MOBILE_WEEK_DAY_COLUMN_MIN_WIDTH = 40;
     const DAY_COLUMN_TODO_CHROME_WIDTH = 42;
     let textMeasureContext = null;
     const state = {
@@ -1687,6 +1774,12 @@
         if (event.key === "Enter") addCommonItem();
       });
       els.commonItemsList.addEventListener("click", (event) => {
+        const moveButton = event.target.closest("[data-common-move]");
+        if (moveButton) {
+          moveCommonItem(moveButton.dataset.commonItem, Number(moveButton.dataset.commonMove));
+          return;
+        }
+
         const button = event.target.closest("[data-common-delete]");
         if (button) removeCommonItem(button.dataset.commonDelete);
       });
@@ -1700,7 +1793,12 @@
         els.copyTargetInput.focus();
       });
       els.confirmCopyBtn.addEventListener("click", copySelectedDay);
-      window.addEventListener("resize", renderWeekTitle);
+      window.addEventListener("resize", handleResize);
+    }
+
+    function handleResize() {
+      renderWeekTitle();
+      if (state.loadedRange) renderCalendar();
     }
 
     async function createSupabaseClient() {
@@ -1876,9 +1974,7 @@
           day === activeDate ? "is-selected" : ""
         ].filter(Boolean).join(" ");
         dayHead.dataset.date = day;
-        dayHead.innerHTML = `
-          <span class="day-date">${formatColumnDate(day)}</span>
-        `;
+        dayHead.innerHTML = renderDayHeadLabel(day);
         grid.appendChild(dayHead);
       });
 
@@ -1913,17 +2009,42 @@
     }
 
     function applyDayColumnWidths(grid, days) {
+      const dayColumnMin = getResponsiveDayColumnMin(days.length);
+      grid.style.setProperty("--day-col-min", `${dayColumnMin}px`);
       days.forEach((day, index) => {
-        grid.style.setProperty(`--day-col-${index}`, `${getDayColumnWidth(day)}px`);
+        grid.style.setProperty(`--day-col-${index}`, `${getDayColumnWidth(day, dayColumnMin)}px`);
       });
     }
 
-    function getDayColumnWidth(day) {
+    function renderDayHeadLabel(day) {
+      if (isMobileLayout() && state.settings.view_mode === "week") {
+        return `
+          <span class="day-date">
+            <span>${formatShortDate(day)}</span>
+            <span>${weekdayName(day)}</span>
+          </span>
+        `;
+      }
+
+      return `<span class="day-date">${formatColumnDate(day)}</span>`;
+    }
+
+    function getResponsiveDayColumnMin(dayCount) {
+      if (state.settings.view_mode !== "week" || dayCount !== 7) return DAY_COLUMN_MIN_WIDTH;
+      const frameWidth = els.calendarFrame.clientWidth || window.innerWidth;
+      const timeColumnWidth = isMobileLayout() ? MOBILE_TIME_COLUMN_WIDTH : DESKTOP_TIME_COLUMN_WIDTH;
+      const fitWidth = Math.floor(Math.max(0, frameWidth - timeColumnWidth - 2) / dayCount);
+      if (isMobileLayout()) return Math.max(MOBILE_WEEK_DAY_COLUMN_MIN_WIDTH, fitWidth);
+      return Math.max(DAY_COLUMN_MIN_WIDTH, fitWidth);
+    }
+
+    function getDayColumnWidth(day, dayColumnMin) {
+      if (isMobileLayout() && state.settings.view_mode === "week") return dayColumnMin;
       const headerWidth = measureUiText(formatColumnDate(day)) + 28;
       const todoWidth = getTodosForDay(day).reduce((width, todo) => {
         return Math.max(width, measureUiText(todo.content || "未命名") + DAY_COLUMN_TODO_CHROME_WIDTH);
       }, 0);
-      return Math.round(Math.min(DAY_COLUMN_MAX_WIDTH, Math.max(DAY_COLUMN_MIN_WIDTH, headerWidth, todoWidth)));
+      return Math.round(Math.min(DAY_COLUMN_MAX_WIDTH, Math.max(dayColumnMin, headerWidth, todoWidth)));
     }
 
     function measureUiText(text) {
@@ -1976,9 +2097,13 @@
     function renderCommonItems() {
       const items = getCommonItems();
       els.commonItemsList.innerHTML = items.length
-        ? items.map((item) => `
+        ? items.map((item, index) => `
           <div class="common-item">
             <span>${escapeHtml(item)}</span>
+            <div class="common-actions" aria-label="調整排序">
+              <button class="mini-button" type="button" data-common-move="-1" data-common-item="${escapeAttr(item)}" title="上移" aria-label="上移"${index === 0 ? " disabled" : ""}>↑</button>
+              <button class="mini-button" type="button" data-common-move="1" data-common-item="${escapeAttr(item)}" title="下移" aria-label="下移"${index === items.length - 1 ? " disabled" : ""}>↓</button>
+            </div>
             <button class="mini-button" type="button" data-common-delete="${escapeAttr(item)}">×</button>
           </div>
         `).join("")
@@ -2130,6 +2255,18 @@
 
     async function removeCommonItem(item) {
       state.settings.common_items = getCommonItems().filter((value) => value !== item);
+      renderCommonItems();
+      renderCalendar();
+      await persistSettings();
+    }
+
+    async function moveCommonItem(item, direction) {
+      const items = getCommonItems();
+      const fromIndex = items.indexOf(item);
+      const toIndex = fromIndex + direction;
+      if (fromIndex < 0 || toIndex < 0 || toIndex >= items.length) return;
+      [items[fromIndex], items[toIndex]] = [items[toIndex], items[fromIndex]];
+      state.settings.common_items = items;
       renderCommonItems();
       renderCalendar();
       await persistSettings();
@@ -2309,6 +2446,7 @@
       renderCalendar();
       const slot = els.calendarFrame.querySelector(`.slot-cell[data-date="${date}"][data-time="${time}"]`);
       if (!slot) return;
+      slot.classList.add("is-adding");
       const row = document.createElement("div");
       row.className = "add-row";
       row.innerHTML = `
